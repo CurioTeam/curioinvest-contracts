@@ -1,0 +1,17 @@
+{
+  "name": "curioinvest-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Smart-contracts of CurioInvest project",
+  "author": "Curio Capital AG",
+  "directories": {
+    "test": "test"
+  },
+  "devDependencies": {
+    "truffle": "^4.1.14",
+    "truffle-hdwallet-provider": "0.0.6"
+  },
+  "dependencies": {
+    "openzeppelin-solidity": "^2.0.0"
+  }
+}
