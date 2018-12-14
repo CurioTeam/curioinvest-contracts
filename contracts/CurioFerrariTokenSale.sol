@@ -5,6 +5,8 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 
+import "./Roles.sol";
+
 // TODO: add whitelist - adding and removing (only admin or owner)
 // TODO: add admin role and owner
 // TODO: _preValidationPurchase: check whitelist for beneficiary
@@ -14,7 +16,7 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 // TODO: timed
 // TODO: refundable
 // TODO: add pausable
-contract CurioFerrariTokenSale is ReentrancyGuard {
+contract CurioFerrariTokenSale is Roles, ReentrancyGuard {
   using SafeMath for uint256;
   using SafeERC20 for IERC20; // TODO: use safe-functions(!!!)
 
@@ -24,11 +26,7 @@ contract CurioFerrariTokenSale is ReentrancyGuard {
   // Address where funds are collected
   address private _wallet;
 
-  /**
-   * @param _wallet Address where collected funds will be forwarded to
-   * @param _token Address of the token being sold
-   */
-  constructor (address wallet, IERC20 token) {
+  constructor (address wallet, IERC20 token) public {
     require(wallet != address(0));
     require(token != address(0));
 
