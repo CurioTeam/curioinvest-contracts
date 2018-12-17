@@ -48,7 +48,7 @@ contract FinalizableCrowdsale is TimedCrowdsale {
    */
   function _finalization() internal {}
 
-  function _finalizationAvailable() internal {
+  function _finalizationAvailable() internal view {
     require(hasClosed());
   }
 }

@@ -67,7 +67,7 @@ contract RefundableCrowdsale is FinalizableCrowdsale {
   }
 
   // override  _finalizationAvailable function in FinalizableCrowdsale
-  function _finalizationAvailable() internal {
+  function _finalizationAvailable() internal view {
     require(hasClosed() || goalReached());
   }
 
@@ -89,7 +89,7 @@ contract RefundableCrowdsale is FinalizableCrowdsale {
    * @param tokenContract The address of the token
    */
   function withdraw(IERC20 tokenContract) onlyOwnerOrAdmin external {
-    require(_tokenContract != address(0));
+    require(tokenContract != address(0));
     require(_state == State.Closed); // only goal reached!!! before - tokens frozen
 
     uint256 amount = tokenContract.balanceOf(address(this));

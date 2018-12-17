@@ -165,7 +165,7 @@ contract Crowdsale is Roles, ReentrancyGuard {
 
     uint256 value = tokenAmount;
 
-    require(tokenAddress.safeTransferFrom(msg.sender, address(this), value));
+    tokenAddress.safeTransferFrom(msg.sender, address(this), value);
 
     // Available tokens
     uint256 tokenBalance = _token.balanceOf(address(this));
@@ -195,14 +195,14 @@ contract Crowdsale is Roles, ReentrancyGuard {
 
   /**
    * @dev Withdraws any tokens from this contract to wallet.
-   * @param tokenContract The address of the foreign token
+   * @param token The address of the foreign token
    */
-  function withdrawForeignTokens(IERC20 tokenContract) onlyOwner external {
-    require(tokenContract != address(0));
-    require(acceptedTokens[tokenAddress].rate == 0); // Any not accepted tokens
+  function withdrawForeignTokens(IERC20 token) onlyOwner external {
+    require(token != address(0));
+    require(acceptedTokens[token].rate == 0); // Any not accepted tokens
 
-    uint256 amount = tokenContract.balanceOf(address(this));
-    tokenContract.safeTransfer(_wallet, amount);
+    uint256 amount = token.balanceOf(address(this));
+    token.safeTransfer(_wallet, amount);
   }
 
   // -----------------------------------------
