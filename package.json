@@ -17,8 +17,10 @@
   "devDependencies": {
     "convict": "^4.4.0",
     "dotenv": "^6.2.0",
+    "moment": "^2.23.0",
     "truffle": "^4.1.14",
     "truffle-hdwallet-provider": "0.0.6",
+    "web3": "^1.0.0-beta.37",
     "web3-provider-engine": "^14.1.0"
   },
   "dependencies": {
