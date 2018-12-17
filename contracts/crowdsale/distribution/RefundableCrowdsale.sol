@@ -8,7 +8,6 @@ import "./FinalizableCrowdsale.sol";
 * @dev Extension of Crowdsale contract that adds a sale goal, and the possibility of users getting a refund if goal
 * is not met.
 */
-// TODO: add escrow in this contract
 contract RefundableCrowdsale is FinalizableCrowdsale {
   using SafeMath for uint256;
 

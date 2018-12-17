@@ -25,6 +25,34 @@ contract Crowdsale is Roles, ReentrancyGuard {
   // Amount of tokens sold
   uint256 private _tokensSold;
 
+  /**
+   * Event for token purchase logging
+   * @param purchaser who paid for the tokens
+   * @param beneficiary who got the tokens
+   * @param token address of foreign token
+   * @param value foreign tokens units paid for purchase
+   * @param amount amount of tokens purchased
+   */
+  event TokensPurchased(
+    address indexed purchaser,
+    address indexed beneficiary,
+    address indexed token,
+    uint256 value,
+    uint256 amount
+  );
+
+  /**
+   * Event for send foreign tokens excess logging
+   * @param beneficiary who gets excess in foreign tokens
+   * @param token address of foreign token
+   * @param value excess token units
+   */
+  event ExcessSent(
+    address indexed beneficiary,
+    address indexed token,
+    uint256 value
+  );
+
   constructor (address wallet, IERC20 token) public {
     require(wallet != address(0));
     require(token != address(0));
@@ -67,70 +95,48 @@ contract Crowdsale is Roles, ReentrancyGuard {
   /**
    * @dev Buy tokens for foreign tokens.
    * @param tokenAddress Address of the foreign token
-   * @param amount Amount of the foreign tokens
+   * @param tokenAmount Amount of the foreign tokens
    */
-  function buy(IERC20 tokenAddress, uint256 amount) external {
-    buyToBeneficiary(tokenAddress, amount, msg.sender);
+  function buy(IERC20 tokenAddress, uint256 tokenAmount) external {
+    buyToBeneficiary(tokenAddress, tokenAmount, msg.sender);
   }
 
-  function buyToBeneficiary(IERC20 tokenAddress, uint256 amount, address beneficiary) public {
-    _preValidatePurchase(tokenAddress, amount, beneficiary);
+  function buyToBeneficiary(IERC20 tokenAddress, uint256 tokenAmount, address beneficiary) public {
+    _preValidatePurchase(tokenAddress, tokenAmount, beneficiary);
 
-    // TODO: add exchange logic (!!!)
+    uint256 value = tokenAmount;
 
-
-    uint256 foreignTokenAmount = amount;
-
-    require(tokenAddress.transferFrom(msg.sender, address(this), foreignTokenAmount));
+    require(tokenAddress.transferFrom(msg.sender, address(this), value));
 
     // Available tokens
     uint256 tokenBalance = _token.balanceOf(address(this));
     require(tokenBalance > 0);
 
     // How many tokens will be buy
-    // uint256 tokens = _getTokenAmount(tokenAddress, foreignTokenAmount); // TODO: add this function
-    uint256 tokens = foreignTokenAmount; // TODO: remove 1:1 rate
+    // uint256 amount = _getTokenAmount(tokenAddress, value); // TODO: add this function
+    uint256 amount = value; // TODO: remove 1:1 rate
 
-    if (tokens > tokenBalance) {
-      tokens = tokenBalance;
-      // foreignTokenAmount = _inverseGetTokenAmount(tokenAddress, tokens); // TODO: add this function
-      foreignTokenAmount = tokens; // TODO: remove 1:1 rate
+    if (amount > tokenBalance) {
+      amount = tokenBalance;
+      // value = _inverseGetTokenAmount(tokenAddress, amount); // TODO: add this function
+      value = amount; // TODO: remove 1:1 rate
 
-      uint256 senderForeignTokenExcess = amount.sub(foreignTokenAmount);
-      tokenAddress.transfer(beneficiary, senderForeignTokenExcess); // Excess to beneficiary TODO: check logic (!!!)
-      /*
-      // TODO: add event
-      emit SendTokensExcess(
-        beneficiary,
-        senderForeignTokenExcess
-      );
-      */
+      uint256 excess = tokenAmount.sub(value);
+      tokenAddress.transfer(beneficiary, excess);
+
+      emit ExcessSent(beneficiary, tokenAddress, excess);
     }
 
     // update state
-    _tokensSold = _tokensSold.add(tokens);
+    _tokensSold = _tokensSold.add(amount);
 
-    // receivedTokens[_tokenAddress].raised = receivedTokens[_tokenAddress].raised.add(foreignTokenAmount);
+    // receivedTokens[_tokenAddress].raised = receivedTokens[_tokenAddress].raised.add(value);
 
-    _processPurchase(beneficiary, tokens); // send tokens to beneficiary
-    /*
-    // TODO: add event
-    emit TokenForTokenPurchase(
-      _sender,
-      _sender,
-      foreignTokenAmount,
-      tokens
-    );
-    */
+    _processPurchase(beneficiary, amount); // send tokens to beneficiary
 
-    _updatePurchasingState(tokenAddress, tokens, beneficiary);
+    emit TokensPurchased(msg.sender, beneficiary, tokenAddress, value, amount);
 
-    /*
-    // TODO: remove if necessary
-
-    _forwardFunds();
-    _postValidatePurchase(beneficiary, weiAmount);
-    */
+    _updatePurchasingState(tokenAddress, amount, beneficiary);
   }
 
   /**
