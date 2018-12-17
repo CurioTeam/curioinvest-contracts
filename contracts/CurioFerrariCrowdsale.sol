@@ -9,10 +9,6 @@ import "./crowdsale/distribution/RefundableCrowdsale.sol";
 * @title CurioFerrariCrowdsale
 * @dev This is an example of a fully fledged crowdsale.
 */
-// TODO: use ReentrancyGuard
-// TODO: add received tokens and its rates
-// TODO: timed
-// TODO: refundable. add custom FinalizableCrowdsale (when goal reached)
 contract CurioFerrariCrowdsale is WhitelistCrowdsale, PausableCrowdsale, RefundableCrowdsale {
   constructor (
     uint256 openingTime,

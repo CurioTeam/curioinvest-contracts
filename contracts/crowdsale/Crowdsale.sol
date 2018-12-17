@@ -11,19 +11,45 @@ import "../access/Roles.sol";
  * @dev Crowdsale is a base contract for managing a token crowdsale.
 */
 
-// TODO: use ReentrancyGuard(!!!)
 contract Crowdsale is Roles, ReentrancyGuard {
   using SafeMath for uint256;
-  using SafeERC20 for IERC20; // TODO: use safe-functions(!!!)
+  using SafeERC20 for IERC20;
+
+  // Represents data of foreign token which can be exchange to token
+  struct AcceptedToken {
+    // name of foreign token
+    string name;
+
+    // number of token units a buyer gets per foreign token unit
+    uint256 rate;
+
+    // amount of raised foreign tokens
+    uint256 raised;
+  }
 
   // The token being sold
   IERC20 private _token;
+
+  // Map from accepted token address to accepted token data
+  mapping (address => AcceptedToken) public acceptedTokens;
 
   // Address where funds are collected
   address private _wallet;
 
   // Amount of tokens sold
   uint256 private _tokensSold;
+
+  /**
+   * Event for add accepted token logging
+   * @param tokenAddress address of added foreign token
+   * @param name name of added token
+   * @param rate number of token units a buyer gets per added foreign token unit
+   */
+  event AcceptedTokenAdded(
+    address indexed tokenAddress,
+    string name,
+    uint256 rate
+  );
 
   /**
    * Event for token purchase logging
@@ -93,6 +119,39 @@ contract Crowdsale is Roles, ReentrancyGuard {
   }
 
   /**
+   * @dev Adds accepted foreign token.
+   * @param tokenAddress Address of the foreign token being added
+   * @param tokenName Name of the foreign token
+   * @param tokenRate Number of token units a buyer gets per foreign token unit
+   */
+  function addAcceptedToken(
+    IERC20 tokenAddress,
+    string tokenName,
+    uint256 tokenRate
+  )
+    onlyOwner
+    external
+  {
+    require(tokenAddress != address(0));
+    require(tokenRate > 0);
+    require(acceptedTokens[tokenAddress].rate == 0);
+
+    AcceptedToken memory token = AcceptedToken({
+      name: tokenName,
+      rate: tokenRate,
+      raised: 0
+    });
+
+    acceptedTokens[tokenAddress] = token;
+
+    emit AcceptedTokenAdded(
+      tokenAddress,
+      token.name,
+      token.rate
+    );
+  }
+
+  /**
    * @dev Buy tokens for foreign tokens.
    * @param tokenAddress Address of the foreign token
    * @param tokenAmount Amount of the foreign tokens
@@ -101,28 +160,26 @@ contract Crowdsale is Roles, ReentrancyGuard {
     buyToBeneficiary(tokenAddress, tokenAmount, msg.sender);
   }
 
-  function buyToBeneficiary(IERC20 tokenAddress, uint256 tokenAmount, address beneficiary) public {
+  function buyToBeneficiary(IERC20 tokenAddress, uint256 tokenAmount, address beneficiary) public nonReentrant {
     _preValidatePurchase(tokenAddress, tokenAmount, beneficiary);
 
     uint256 value = tokenAmount;
 
-    require(tokenAddress.transferFrom(msg.sender, address(this), value));
+    require(tokenAddress.safeTransferFrom(msg.sender, address(this), value));
 
     // Available tokens
     uint256 tokenBalance = _token.balanceOf(address(this));
     require(tokenBalance > 0);
 
     // How many tokens will be buy
-    // uint256 amount = _getTokenAmount(tokenAddress, value); // TODO: add this function
-    uint256 amount = value; // TODO: remove 1:1 rate
+    uint256 amount = value.mul(acceptedTokens[tokenAddress].rate);
 
     if (amount > tokenBalance) {
       amount = tokenBalance;
-      // value = _inverseGetTokenAmount(tokenAddress, amount); // TODO: add this function
-      value = amount; // TODO: remove 1:1 rate
+      value = amount.div(acceptedTokens[tokenAddress].rate);
 
       uint256 excess = tokenAmount.sub(value);
-      tokenAddress.transfer(beneficiary, excess);
+      tokenAddress.safeTransfer(beneficiary, excess);
 
       emit ExcessSent(beneficiary, tokenAddress, excess);
     }
@@ -130,23 +187,22 @@ contract Crowdsale is Roles, ReentrancyGuard {
     // update state
     _tokensSold = _tokensSold.add(amount);
 
-    // receivedTokens[_tokenAddress].raised = receivedTokens[_tokenAddress].raised.add(value);
-
     _processPurchase(beneficiary, amount); // send tokens to beneficiary
-
     emit TokensPurchased(msg.sender, beneficiary, tokenAddress, value, amount);
 
-    _updatePurchasingState(tokenAddress, amount, beneficiary);
+    _updatePurchasingState(tokenAddress, value, beneficiary);
   }
 
   /**
    * @dev Withdraws any tokens from this contract to wallet.
    * @param tokenContract The address of the foreign token
    */
-  function withdrawForeignTokens(IERC20 tokenContract) onlyOwnerOrAdmin external {
-    // TODO: disallow withdraw stable tokens (freeze)
-    // ...
-    // TODO: or remove this function
+  function withdrawForeignTokens(IERC20 tokenContract) onlyOwner external {
+    require(tokenContract != address(0));
+    require(acceptedTokens[tokenAddress].rate == 0); // Any not accepted tokens
+
+    uint256 amount = tokenContract.balanceOf(address(this));
+    tokenContract.safeTransfer(_wallet, amount);
   }
 
   // -----------------------------------------
@@ -155,7 +211,7 @@ contract Crowdsale is Roles, ReentrancyGuard {
 
   function _preValidatePurchase(IERC20 tokenAddress, uint256 amount, address beneficiary) internal view {
     require(tokenAddress != address(0));
-    // require(receivedTokens[_tokenAddress].rate > 0); TODO: add functionality
+    require(acceptedTokens[tokenAddress].rate > 0);
 
     require(beneficiary != address(0));
     require(amount > 0);
@@ -176,11 +232,10 @@ contract Crowdsale is Roles, ReentrancyGuard {
    * @param amount Number of tokens to be emitted
    */
   function _deliverTokens(address beneficiary, uint256 amount) internal {
-    _token.transfer(beneficiary, amount);
+    _token.safeTransfer(beneficiary, amount);
   }
 
   function _updatePurchasingState(IERC20 tokenAddress, uint256 amount, address beneficiary) internal {
-
+    acceptedTokens[tokenAddress].raised = acceptedTokens[tokenAddress].raised.add(amount);
   }
-
 }

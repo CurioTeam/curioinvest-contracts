@@ -1,6 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 import "./FinalizableCrowdsale.sol";
 
 /**
@@ -10,6 +11,7 @@ import "./FinalizableCrowdsale.sol";
 */
 contract RefundableCrowdsale is FinalizableCrowdsale {
   using SafeMath for uint256;
+  using SafeERC20 for IERC20;
 
   enum State { Active, Refunding, Closed }
 
@@ -91,7 +93,7 @@ contract RefundableCrowdsale is FinalizableCrowdsale {
     require(_state == State.Closed); // only goal reached!!! before - tokens frozen
 
     uint256 amount = tokenContract.balanceOf(address(this));
-    tokenContract.transfer(wallet(), amount);
+    tokenContract.safeTransfer(wallet(), amount);
   }
 
 
@@ -141,7 +143,7 @@ contract RefundableCrowdsale is FinalizableCrowdsale {
 
     _deposits[payee][tokenAddress] = 0;
 
-    tokenAddress.transfer(payee, payment);
+    tokenAddress.safeTransfer(payee, payment);
 
     emit Withdrawn(payee, tokenAddress, payment);
   }
