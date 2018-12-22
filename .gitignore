@@ -8,3 +8,8 @@ npm-debug.log*
 
 ### Truffle
 /build
+
+### Project
+config/params/*
+!config/params/index.js
+!config/params/example.json

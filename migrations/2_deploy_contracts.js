@@ -1,6 +1,8 @@
 const moment = require('moment');
 const Web3 = require('web3');
 
+const config = require('../config/params');
+
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
     CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol');
 
@@ -8,21 +10,37 @@ let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
 const web3 = new Web3(this.web3.currentProvider);
 const BN = web3.utils.BN;
 
-let params = {
-  crowdsale: {
-    openingTime: moment.utc("2019-01-01 00:00:00").unix(), // ISO 8601
-    closingTime: moment.utc("2019-03-31 23:59:59").unix(), // ISO 8601
-    wallet: '',
-    saleGoal: new BN('890000e18'),
-  }
-};
-
 module.exports = function(deployer, network, accounts) {
   const owner = accounts[0];
+  let net;
 
-  params.crowdsale.wallet = accounts[2];
+  switch (network) {
+    case 'mainnet':
+      net = 1;
+      break;
+    case 'ropsten':
+      net = 3;
+      break;
+    default:
+      net = 123;
+  }
 
-  deployer.deploy(CurioFerrariToken, { from: owner})
+  const deployParams = config.get(net);
+
+  let params = {
+    crowdsale: {
+      openingTime: moment.utc(deployParams.openingTime).unix(),
+      closingTime: moment.utc(deployParams.closingTime).unix(),
+      wallet: deployParams.wallet,
+      saleGoal: web3.utils.toWei(deployParams.saleGoal),
+    }
+  };
+
+  if(params.crowdsale.wallet === ""){
+    params.crowdsale.wallet = accounts[2];
+  }
+
+  deployer.deploy(CurioFerrariToken, { from: owner })
     .then(() => deployer.deploy(CurioFerrariCrowdsale,
                                 params.crowdsale.openingTime,
                                 params.crowdsale.closingTime,
