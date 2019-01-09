@@ -50,7 +50,10 @@ const init = async function (network, accounts) {
   console.log("Before balance: " + beforeBalance + " tokens");
 
   console.log("..processing..");
-  await token.transfer(CurioFerrariCrowdsale.address, web3.utils.toWei(params.saleGoal), { from: ownerAccount });
+  const totalSupply = await token.totalSupply();
+
+  // Transfer all tokens to crowdsale contract
+  await token.transfer(CurioFerrariCrowdsale.address, totalSupply, { from: ownerAccount });
 
   let afterBalance = await token.balanceOf(CurioFerrariCrowdsale.address);
   afterBalance = web3.utils.fromWei(web3.utils.toBN(afterBalance));

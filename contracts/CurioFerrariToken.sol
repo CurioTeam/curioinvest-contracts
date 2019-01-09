@@ -7,7 +7,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
  * @title CurioFerrariToken
  */
 contract CurioFerrariToken is ERC20, ERC20Detailed {
-  uint256 public constant INITIAL_SUPPLY = 890000 * (10 ** uint256(decimals()));
+  uint256 public constant INITIAL_SUPPLY = 1100000 * (10 ** uint256(decimals()));
 
   /**
    * @dev Constructor that gives msg.sender all of existing tokens.
