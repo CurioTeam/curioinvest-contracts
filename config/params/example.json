@@ -2,5 +2,18 @@
   "openingTime": "",
   "closingTime": "",
   "wallet": "",
-  "saleGoal": ""
+  "saleGoal": "",
+  "tokens":
+  [
+    {
+      "address": "",
+      "name": "",
+      "rate": ""
+    },
+    {
+      "address": "",
+      "name": "",
+      "rate": ""
+    }
+  ]
 }

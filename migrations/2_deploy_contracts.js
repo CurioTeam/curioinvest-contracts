@@ -4,7 +4,9 @@ const Web3 = require('web3');
 const config = require('../config/params');
 
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
-    CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol');
+    CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
+    TestDAI = artifacts.require('./TestDAI.sol'),
+    TestTUSD = artifacts.require('./TestTUSD.sol');
 
 // Use web3 version 1.0
 const web3 = new Web3(this.web3.currentProvider);
@@ -47,5 +49,7 @@ module.exports = function(deployer, network, accounts) {
                                 params.crowdsale.wallet,
                                 CurioFerrariToken.address,
                                 params.crowdsale.saleGoal,
-                                { from: owner }));
+                                { from: owner }))
+    .then(() => net !== 1 ? deployer.deploy(TestDAI, {from: owner}) : true)
+    .then(() => net !== 1 ? deployer.deploy(TestTUSD, {from: owner}) : true);
 };

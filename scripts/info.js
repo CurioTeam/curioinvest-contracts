@@ -4,7 +4,9 @@ const Web3 = require('web3');
 const config = require('../config/params');
 
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
-    CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol');
+    CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
+    TestDAI = artifacts.require('./TestDAI.sol'),
+    TestTUSD = artifacts.require('./TestTUSD.sol');
 
 // Use web3 version 1.0
 const web3 = new Web3(this.web3.currentProvider);
@@ -19,6 +21,14 @@ const info = async function (network, accounts) {
 
   let crowdsale = await CurioFerrariCrowdsale.deployed();
   console.log("CurioFerrariCrowdsale: " + CurioFerrariCrowdsale.address);
+
+  if(network !== 1) {
+    let testDAI = await TestDAI.deployed();
+    console.log("TestDAI: " + TestDAI.address);
+
+    let testTUSD = await TestTUSD.deployed();
+    console.log("TestTUSD: " + TestTUSD.address);
+  }
 
   console.log("Owner-deployer account: " + ownerAccount);
   console.log("-----");
