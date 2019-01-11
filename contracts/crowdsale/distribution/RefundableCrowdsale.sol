@@ -52,7 +52,7 @@ contract RefundableCrowdsale is FinalizableCrowdsale {
    */
   function claimRefund(address refundee, IERC20 tokenContract) public {
     require(finalized());
-    require(!goalReached());
+    // require(!goalReached());
     require(_state == State.Refunding);
 
     _withdraw(tokenContract, refundee);
