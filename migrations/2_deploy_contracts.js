@@ -35,6 +35,7 @@ module.exports = function(deployer, network, accounts) {
       closingTime: moment.utc(deployParams.closingTime).unix(),
       wallet: deployParams.wallet,
       saleGoal: web3.utils.toWei(deployParams.saleGoal),
+      rewardsPercent: deployParams.rewardsPercent * 100,
     }
   };
 
@@ -49,6 +50,7 @@ module.exports = function(deployer, network, accounts) {
                                 params.crowdsale.wallet,
                                 CurioFerrariToken.address,
                                 params.crowdsale.saleGoal,
+                                params.rewardsPercent,
                                 { from: owner }))
     .then(() => net !== 1 ? deployer.deploy(TestDAI, {from: owner}) : true)
     .then(() => net !== 1 ? deployer.deploy(TestTUSD, {from: owner}) : true);

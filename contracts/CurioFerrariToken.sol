@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
@@ -7,12 +7,13 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
  * @title CurioFerrariToken
  */
 contract CurioFerrariToken is ERC20, ERC20Detailed {
-  uint256 public constant INITIAL_SUPPLY = 1100000 * (10 ** uint256(decimals()));
+  uint8 public constant DECIMALS = 18;
+  uint256 public constant INITIAL_SUPPLY = 1100000 * (10 ** uint256(DECIMALS));
 
   /**
    * @dev Constructor that gives msg.sender all of existing tokens.
    */
-  constructor () public ERC20Detailed("CurioFerrariToken", "CFТ", 18) {
+  constructor () public ERC20Detailed("CurioFerrariToken", "CFТ", DECIMALS) {
     _mint(msg.sender, INITIAL_SUPPLY);
   }
 }

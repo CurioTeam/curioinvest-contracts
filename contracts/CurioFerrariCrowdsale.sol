@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -13,79 +13,51 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  enum State { Active, Refunding, Closed, Rewarding }
-
-  // Represents data of foreign token which can be exchange to token
-  struct AcceptedToken {
-    // name of foreign token
-    string name;
-
-    // number of token units a buyer gets per foreign token unit
-    uint256 rate;
-
-    // amount of raised foreign tokens
-    uint256 raised;
-  }
-
-  event RefundsClosed();
-  event RefundsEnabled();
-  event Deposited(address indexed payee, address indexed token, uint256 amount);
-  event Withdrawn(address indexed payee, address indexed token, uint256 amount);
-
-  event CrowdsaleFinalized();
-
-  State private _state;
-
-  uint256 private _saleGoal;
-
-  // _deposits[beneficiary][token] = amount
-  mapping(address => mapping (address => uint256)) private _deposits;
+  enum State { Active, Closed, Refunding, Rewarding }
 
   // The token being sold
   IERC20 private _token;
 
-  mapping(address => uint256) private _balances;
-
-  // Map from accepted token address to accepted token data
-  mapping (address => AcceptedToken) public acceptedTokens;
-
-  mapping (address => bool) private _whitelist;
+  IERC20 private _acceptedToken;
 
   // Address where funds are collected
   address private _wallet;
 
-  // Amount of tokens sold
-  uint256 private _tokensSold;
+  uint256 private _rate;
+
+  uint256 private _raised;
+
+  // Raise goal
+  uint256 private _goal;
+
+  // Percent of rewards after car purchase (1/100 of a percent; 0-10,000 map to 0%-100%)
+  uint256 private _rewardsPercent;
+
+  uint256 private _openingTime;
+
+  uint256 private _closingTime;
+
+  State private _state;
 
   bool private _finalized;
 
-  uint256 private _openingTime;
-  uint256 private _closingTime;
+  bool private _carPurchased;
 
-  /**
-   * Event for add accepted token logging
-   * @param tokenAddress address of added foreign token
-   * @param name name of added token
-   * @param rate number of token units a buyer gets per added foreign token unit
-   */
-  event AcceptedTokenAdded(
-    address indexed tokenAddress,
-    string name,
-    uint256 rate
-  );
+  mapping(address => uint256) private _deposits;
+
+  mapping (address => bool) private _whitelist;
+
 
   /**
    * Event for token purchase logging
    * @param purchaser who paid for the tokens
    * @param beneficiary who got the tokens
-   * @param token address of foreign token
    * @param value foreign tokens units paid for purchase
    * @param amount amount of tokens purchased
    */
   event TokensPurchased(
     address indexed purchaser,
     address indexed beneficiary,
-    address indexed token,
     uint256 value,
     uint256 amount
   );
@@ -93,14 +65,21 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   /**
    * Event for send foreign tokens excess logging
    * @param beneficiary who gets excess in foreign tokens
-   * @param token address of foreign token
    * @param value excess token units
    */
-  event ExcessSent(
-    address indexed beneficiary,
-    address indexed token,
-    uint256 value
-  );
+  event ExcessSent(address indexed beneficiary, uint256 value);
+
+  event RefundsClosed();
+  event RefundsEnabled();
+  event RewardsEnabled();
+
+  event Deposited(address indexed payee, uint256 amount);
+  event RefundWithdrawn(address indexed refundee, uint256 amount);
+  event RewardWithdrawn(address indexed rewardee, uint256 amount);
+  event TokensClaimed(address indexed beneficiary, uint256 amount);
+
+  event CrowdsaleFinalized();
+
 
   /**
    * @dev Constructor.
@@ -108,49 +87,93 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    * @param closingTime Crowdsale closing time
    * @param wallet Address where collected funds will be forwarded to
    * @param token Address of the token being sold
-   * @param saleGoal Goal for sold tokens
+   * @param acceptedToken Address of the token being exchanged to token
+   * @param rate Number of token units a buyer gets per accepted token's unit
+   * @param goal Raise goal (soft and hard cap)
+   * @param rewardsPercent Percent of investor's rewards after car purchased (0-10,000)
    */
-  constructor (uint256 openingTime, uint256 closingTime, address wallet, IERC20 token, uint256 saleGoal) public {
+  constructor (
+    uint256 openingTime,
+    uint256 closingTime,
+    address wallet,
+    IERC20 token,
+    IERC20 acceptedToken,
+    uint256 rate,
+    uint256 goal,
+    uint256 rewardsPercent
+  )
+    public
+  {
     require(openingTime >= block.timestamp);
     require(closingTime > openingTime);
     require(wallet != address(0));
     require(token != address(0));
-    require(saleGoal > 0);
+    require(acceptedToken != address(0));
+    require(acceptedToken != token);
+    require(rate > 0);
+    require(goal > 0);
+    require(rewardsPercent <= 10000);
 
     _openingTime = openingTime;
     _closingTime = closingTime;
     _wallet = wallet;
     _token = token;
-    _saleGoal = saleGoal;
+    _acceptedToken = acceptedToken;
+    _rate = rate;
+    _goal = goal;
+    _rewardsPercent = rewardsPercent;
     _state = State.Active;
 
     _finalized = false;
+    _carPurchased = false;
   }
 
 
   // -----------------------------------------
   // External interface
   // -----------------------------------------
-  function () external payable {
+  function () external {
     revert();
   }
 
   /**
-    * @return the address where funds are collected.
-    */
+   * @return the token being sold.
+   */
+  function token() public view returns (IERC20) {
+    return _token;
+  }
+
+  function acceptedToken() public view returns (IERC20) {
+    return _acceptedToken;
+  }
+
+  /**
+   * @return the address where funds are collected.
+   */
   function wallet() public view returns (address) {
     return _wallet;
   }
 
   /**
-    * @return the amount of tokens sold.
-    */
-  function tokensSold() public view returns (uint256) {
-    return _tokensSold;
+   * @return the number of token units a buyer gets per accepted token's unit.
+   */
+  function rate() public view returns (uint256) {
+    return _rate;
   }
 
-  function saleGoal() public view returns (uint256) {
-    return _saleGoal;
+  /**
+   * @return the amount of tokens raised.
+   */
+  function raised() public view returns (uint256) {
+    return _raised;
+  }
+
+  function goal() public view returns (uint256) {
+    return _goal;
+  }
+
+  function rewardsPercent() public view returns (uint256) {
+    return _rewardsPercent;
   }
 
   function state() public view returns (State) {
@@ -162,6 +185,10 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    */
   function finalized() public view returns (bool) {
     return _finalized;
+  }
+
+  function carPurchased() public view returns (bool) {
+    return _carPurchased;
   }
 
   /**
@@ -230,12 +257,16 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   function finalize() public {
     require(!_finalized);
 
-    require(hasClosed() || goalReached());
+    require(goalReached() || hasClosed());
 
     _finalized = true;
 
     if (goalReached()) {
-      _close();
+      if (carPurchased()) {
+        _enableRewards();
+      } else {
+        _close();
+      }
     } else {
       _enableRefunds();
     }
@@ -253,78 +284,128 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
-   * @dev Adds accepted foreign token.
-   * @param tokenAddress Address of the foreign token being added
-   * @param tokenName Name of the foreign token
-   * @param tokenRate Number of token units a buyer gets per foreign token unit
+   * @dev Buy tokens for accepted tokens.
+   * @param amount Amount of tokens will be buy
    */
-  function addAcceptedToken(
-    IERC20 tokenAddress,
-    string tokenName,
-    uint256 tokenRate
-  )
-  onlyOwner
-  external
-  {
-    require(tokenAddress != address(0));
-    require(tokenRate > 0);
-    require(acceptedTokens[tokenAddress].rate == 0);
+  function buy(uint256 amount) external {
+    buyToBeneficiary(amount, msg.sender);
+  }
 
-    AcceptedToken memory token = AcceptedToken({
-      name: tokenName,
-      rate: tokenRate,
-      raised: 0
-      });
+  function buyToBeneficiary(uint256 amount, address beneficiary) public nonReentrant {
+    _preValidatePurchase(amount, beneficiary);
 
-    acceptedTokens[tokenAddress] = token;
+    // How many tokens will be buy
+    uint256 tokens = amount;
 
-    emit AcceptedTokenAdded(
-      tokenAddress,
-      token.name,
-      token.rate
-    );
+    // Calculate value of accepted tokens
+    uint256 value = _fromToken(tokens);
+
+    // Available tokens for purchase
+    uint256 availableTokens = _toToken(_goal.sub(_raised));
+    require(availableTokens > 0);
+
+    _acceptedToken.safeTransferFrom(msg.sender, address(this), value);
+
+    if (tokens > availableTokens) {
+      tokens = availableTokens;
+
+      // Value equivalent to purchased tokens
+      value = _fromToken(tokens);
+
+      uint256 excess = _fromToken(amount).sub(value);
+      _acceptedToken.safeTransfer(beneficiary, excess);
+
+      emit ExcessSent(beneficiary, excess);
+    }
+
+    // Update raised state
+    _raised = _raised.add(value);
+
+    // Save deposit
+    _deposit(value, beneficiary);
+    emit TokensPurchased(msg.sender, beneficiary, value, tokens);
+  }
+
+  function carPurchase() external {
+    carPurchaseToBeneficiary(msg.sender);
+  }
+
+  function carPurchase(address beneficiary) public nonReentrant {
+    // TODO: add car purchase logic
+    //
+    // ...
+    //
   }
 
   /**
-   * @dev Buy tokens for foreign tokens.
-   * @param tokenAddress Address of the foreign token
-   * @param tokenAmount Amount of the foreign tokens
+   * @dev Withdraw tokens only after crowdsale ends.
+   * @param beneficiary Whose tokens will be withdrawn.
    */
-  function buy(IERC20 tokenAddress, uint256 tokenAmount) external {
-    buyToBeneficiary(tokenAddress, tokenAmount, msg.sender);
+  function claimTokens(address beneficiary) public {
+    require(finalized());
+    require(_state == State.Closed);
+
+    uint256 amount = _toToken(_deposits[beneficiary]);
+    require(amount > 0);
+
+    _deposits[beneficiary] = 0;
+
+    _token.safeTransfer(beneficiary, amount);
+
+    emit TokensClaimed(beneficiary, amount);
   }
 
-  function buyToBeneficiary(IERC20 tokenAddress, uint256 tokenAmount, address beneficiary) public nonReentrant {
-    _preValidatePurchase(tokenAddress, tokenAmount, beneficiary);
+  /**
+   * @dev Investors can claim refunds here if crowdsale is unsuccessful
+   * @param refundee Whose refund will be claimed.
+   */
+  function claimRefund(address refundee) external {
+    require(finalized());
+    require(_state == State.Refunding);
 
-    uint256 value = tokenAmount;
+    uint256 amount = _deposits[refundee];
 
-    tokenAddress.safeTransferFrom(msg.sender, address(this), value);
+    _deposits[refundee] = 0;
 
-    // Available tokens
-    uint256 tokenBalance = _token.balanceOf(address(this));
-    require(tokenBalance > 0);
+    _acceptedToken.safeTransfer(refundee, amount);
 
-    // How many tokens will be buy
-    uint256 amount = value.mul(acceptedTokens[tokenAddress].rate);
+    emit RefundWithdrawn(refundee, amount);
+  }
 
-    if (amount > tokenBalance) {
-      amount = tokenBalance;
-      value = amount.div(acceptedTokens[tokenAddress].rate);
+  function claimReward(address rewardee) external {
+    require(finalized());
+    require(_state == State.Rewarding);
 
-      uint256 excess = tokenAmount.sub(value);
-      tokenAddress.safeTransfer(beneficiary, excess);
+    require(_deposits[rewardee] > 0);
 
-      emit ExcessSent(beneficiary, tokenAddress, excess);
-    }
+    uint256 amount = _deposits[rewardee];
 
-    // update state
-    _tokensSold = _tokensSold.add(amount);
+    uint256 reward = _calculateReward(amount);
 
-    _processPurchase(beneficiary, amount); // send tokens to beneficiary
-    emit TokensPurchased(msg.sender, beneficiary, tokenAddress, value, amount);
+    amount = amount.add(reward);
 
-    _updatePurchasingState(tokenAddress, value, beneficiary);
+    _deposits[rewardee] = 0;
+
+    _acceptedToken.safeTransfer(rewardee, amount);
+
+    emit RewardWithdrawn(rewardee, amount);
+  }
+
+  /**
+   * @dev Checks whether funding goal was reached.
+   * @return Whether funding goal was reached
+   */
+  function goalReached() public view returns (bool) {
+    return _raised >= _goal;
+  }
+
+  /**
+   * @dev Withdraws raised tokens from this contract to wallet.
+   */
+  function withdraw() onlyOwnerOrAdmin external {
+    require(_state == State.Closed || _state == State.Rewarding);
+
+    _acceptedToken.safeTransfer(_wallet, _raised);
   }
 
   /**
@@ -333,110 +414,45 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    */
   function withdrawForeignTokens(IERC20 token) onlyOwner external {
     require(token != address(0));
-    require(acceptedTokens[token].rate == 0); // Any not accepted tokens
+
+    // Withdraw any tokens when crowdsale closed or rewarding state
+    // Else withdraw only not accepted tokens
+    require(token != _acceptedToken || _state == State.Closed || _state == State.Rewarding);
 
     uint256 amount = token.balanceOf(address(this));
     token.safeTransfer(_wallet, amount);
   }
 
-  /**
-   * @dev Withdraw tokens only after crowdsale ends.
-   * @param beneficiary Whose tokens will be withdrawn.
-   */
-  function withdrawTokens(address beneficiary) public {
-    require(finalized());
-    require(goalReached());
-    // require(hasClosed());
 
-    uint256 amount = _balances[beneficiary];
-    require(amount > 0);
-    _balances[beneficiary] = 0;
-    _deliverTokens(beneficiary, amount);
+  function depositsOf(address payee) public view returns (uint256) {
+    return _deposits[payee];
   }
 
   /**
    * @return the balance of an account.
    */
   function balanceOf(address account) public view returns (uint256) {
-    return _balances[account];
-  }
-
-  /**
-   * @dev Investors can claim refunds here if crowdsale is unsuccessful
-   * @param refundee Whose refund will be claimed.
-   */
-  function claimRefund(address refundee, IERC20 tokenContract) public {
-    require(finalized());
-    // require(!goalReached());
-    require(_state == State.Refunding);
-
-    _withdraw(tokenContract, refundee);
-  }
-
-  /**
-   * @dev Checks whether funding goal was reached.
-   * @return Whether funding goal was reached
-   */
-  function goalReached() public view returns (bool) {
-    return tokensSold() >= _saleGoal;
-  }
-
-  /**
-   * @dev Withdraws any tokens from this contract to wallet.
-   * @param tokenContract The address of the token
-   */
-  function withdraw(IERC20 tokenContract) onlyOwnerOrAdmin external {
-    require(tokenContract != address(0));
-    require(_state == State.Closed); // only goal reached!!! before - tokens frozen
-
-    uint256 amount = tokenContract.balanceOf(address(this));
-    tokenContract.safeTransfer(wallet(), amount);
-  }
-
-
-  function depositsOf(address payee, IERC20 tokenContract) public view returns (uint256) {
-    return _deposits[payee][tokenContract];
+    return _toToken(_deposits[account]);
   }
 
   // -----------------------------------------
   // Internal interface
   // -----------------------------------------
 
-  function _preValidatePurchase(IERC20 tokenAddress, uint256 amount, address beneficiary) internal view whenNotPaused {
+  function _preValidatePurchase(uint256 amount, address beneficiary) internal view whenNotPaused {
     require(isOpen());
 
     require(beneficiary != address(0));
     require(isWhitelisted(beneficiary));
 
-    require(tokenAddress != address(0));
-    require(acceptedTokens[tokenAddress].rate > 0);
-
     require(amount > 0);
   }
 
-  /**
-  * @dev Executed when a purchase has been validated and is ready to be executed. Not necessarily emits/sends tokens.
-  * @param beneficiary Address receiving the tokens
-  * @param amount Number of tokens to be purchased
-  */
-  function _processPurchase(address beneficiary, uint256 amount) internal {
-    _balances[beneficiary] = _balances[beneficiary].add(amount);
-  }
-
-  /**
-   * @dev Source of tokens.
-   * @param beneficiary Address performing the token purchase
-   * @param amount Number of tokens to be emitted
-   */
-  function _deliverTokens(address beneficiary, uint256 amount) internal {
-    _token.safeTransfer(beneficiary, amount);
-  }
-
+  /*
   function _updatePurchasingState(IERC20 tokenAddress, uint256 amount, address beneficiary) internal {
     _deposit(tokenAddress, amount, beneficiary);
-
-    acceptedTokens[tokenAddress].raised = acceptedTokens[tokenAddress].raised.add(amount);
   }
+  */
 
   /**
      * @dev Allows for the beneficiary to withdraw their funds, rejecting
@@ -444,7 +460,9 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
      */
   function _close() internal {
     require(_state == State.Active);
+
     _state = State.Closed;
+
     emit RefundsClosed();
   }
 
@@ -453,31 +471,35 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    */
   function _enableRefunds() internal {
     require(_state == State.Active);
+
     _state = State.Refunding;
+
     emit RefundsEnabled();
   }
 
-  /**
-  * @dev Stores the sent amount as credit to be withdrawn.
-  * @param payee The destination address of the funds.
-  */
-  function _deposit(IERC20 tokenAddress, uint256 amount, address payee) internal {
-    _deposits[payee][tokenAddress] = _deposits[payee][tokenAddress].add(amount);
+  function _enableRewards() internal {
+    require(_state == State.Active);
 
-    emit Deposited(payee, tokenAddress, amount);
+    _state = State.Rewarding;
+
+    emit RewardsEnabled();
   }
 
-  /**
-  * @dev Withdraw accumulated balance for a payee.
-  * @param payee The address whose funds will be withdrawn and transferred to.
-  */
-  function _withdraw(IERC20 tokenAddress, address payee) internal {
-    uint256 payment = _deposits[payee][tokenAddress];
+  function _deposit(uint256 value, address payee) internal {
+    _deposits[payee] = _deposits[payee].add(value);
 
-    _deposits[payee][tokenAddress] = 0;
+    emit Deposited(payee, value);
+  }
 
-    tokenAddress.safeTransfer(payee, payment);
+  function _toToken(uint256 value) internal view returns (uint256) {
+    return _rate > 1 ? value.mul(_rate) : value;
+  }
 
-    emit Withdrawn(payee, tokenAddress, payment);
+  function _fromToken(uint256 amount) internal view returns (uint256) {
+    return _rate > 1 ? amount.div(_rate) : amount;
+  }
+
+  function _calculateReward(uint256 amount) internal view returns (uint256) {
+    return amount.mul(_rewardsPercent).div(10000);
   }
 }

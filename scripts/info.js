@@ -54,6 +54,10 @@ const info = async function (network, accounts) {
   saleGoal = web3.utils.fromWei(web3.utils.toBN(saleGoal));
   console.log("Sale goal: " + saleGoal + " tokens");
 
+  let rewardsPercent = await crowdsale.rewardsPercent();
+  rewardsPercent = web3.utils.toBN(rewardsPercent).toNumber() / 100;
+  console.log("rewardsPercent: " + rewardsPercent + "%");
+
   let tokensSold = await crowdsale.tokensSold();
   tokensSold = web3.utils.fromWei(web3.utils.toBN(tokensSold));
   console.log("Tokens sold: " + tokensSold + " tokens");
