@@ -52,7 +52,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    * Event for token purchase logging
    * @param purchaser who paid for the tokens
    * @param beneficiary who got the tokens
-   * @param value foreign tokens units paid for purchase
+   * @param value accepted tokens units paid for purchase
    * @param amount amount of tokens purchased
    */
   event TokensPurchased(
@@ -61,24 +61,17 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     uint256 value,
     uint256 amount
   );
-
-  /**
-   * Event for send foreign tokens excess logging
-   * @param beneficiary who gets excess in foreign tokens
-   * @param value excess token units
-   */
   event ExcessSent(address indexed beneficiary, uint256 value);
+  event CarPurchased(address indexed beneficiary);
 
-  event RefundsClosed();
+  event CrowdsaleFinalized();
+  event CrowdsaleClosed();
   event RefundsEnabled();
   event RewardsEnabled();
 
-  event Deposited(address indexed payee, uint256 amount);
+  event TokensClaimed(address indexed beneficiary, uint256 amount);
   event RefundWithdrawn(address indexed refundee, uint256 amount);
   event RewardWithdrawn(address indexed rewardee, uint256 amount);
-  event TokensClaimed(address indexed beneficiary, uint256 amount);
-
-  event CrowdsaleFinalized();
 
 
   /**
@@ -107,9 +100,9 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     require(openingTime >= block.timestamp);
     require(closingTime > openingTime);
     require(wallet != address(0));
-    require(token != address(0));
-    require(acceptedToken != address(0));
-    require(acceptedToken != token);
+    require(address(token) != address(0));
+    require(address(acceptedToken) != address(0));
+    require(address(acceptedToken) != address(token));
     require(rate > 0);
     require(goal > 0);
     require(rewardsPercent <= 10000);
@@ -236,11 +229,13 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    * @dev Adds list of addresses to whitelist. Not overloaded due to limitations with truffle testing.
    * @param accounts Addresses to be added to the whitelist
    */
+  /*
   function addManyToWhitelist(address[] accounts) external onlyAdmin {
     for (uint256 i = 0; i < accounts.length; i++) {
       _whitelist[accounts[i]] = true;
     }
   }
+  */
 
   /**
    * @dev Removes single address from whitelist.
@@ -322,7 +317,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     _raised = _raised.add(value);
 
     // Save deposit
-    _deposit(value, beneficiary);
+    _deposits[beneficiary] = _deposits[beneficiary].add(value);
     emit TokensPurchased(msg.sender, beneficiary, value, tokens);
   }
 
@@ -330,11 +325,28 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     carPurchaseToBeneficiary(msg.sender);
   }
 
-  function carPurchase(address beneficiary) public nonReentrant {
-    // TODO: add car purchase logic
-    //
-    // ...
-    //
+  function carPurchaseToBeneficiary(address beneficiary) public nonReentrant {
+    require(!_carPurchased);
+    require(!goalReached());
+    _preValidatePurchase(_goal, beneficiary);
+
+    uint256 rewards = _calculateReward(_raised.sub(_deposits[beneficiary]));
+
+    uint256 value = _goal.sub(_deposits[beneficiary]).add(rewards);
+
+    _acceptedToken.safeTransferFrom(msg.sender, address(this), value);
+
+    // Update raised state
+    _raised = _goal;
+
+    // Transfer tokens directly to beneficiary
+    _token.safeTransfer(beneficiary, _goal);
+
+    // Withdraw beneficiary deposit
+    _deposits[beneficiary] = 0;
+
+    _carPurchased = true;
+    emit CarPurchased(beneficiary);
   }
 
   /**
@@ -410,17 +422,17 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
 
   /**
    * @dev Withdraws any tokens from this contract to wallet.
-   * @param token The address of the foreign token
+   * @param tokenAddress The address of the foreign token
    */
-  function withdrawForeignTokens(IERC20 token) onlyOwner external {
-    require(token != address(0));
+  function withdrawForeignTokens(IERC20 tokenAddress) onlyOwner external {
+    require(address(tokenAddress) != address(0));
 
     // Withdraw any tokens when crowdsale closed or rewarding state
     // Else withdraw only not accepted tokens
-    require(token != _acceptedToken || _state == State.Closed || _state == State.Rewarding);
+    require(tokenAddress != _acceptedToken || _state == State.Closed || _state == State.Rewarding);
 
-    uint256 amount = token.balanceOf(address(this));
-    token.safeTransfer(_wallet, amount);
+    uint256 amount = tokenAddress.balanceOf(address(this));
+    tokenAddress.safeTransfer(_wallet, amount);
   }
 
 
@@ -448,22 +460,16 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     require(amount > 0);
   }
 
-  /*
-  function _updatePurchasingState(IERC20 tokenAddress, uint256 amount, address beneficiary) internal {
-    _deposit(tokenAddress, amount, beneficiary);
-  }
-  */
-
   /**
-     * @dev Allows for the beneficiary to withdraw their funds, rejecting
-     * further deposits.
-     */
+   * @dev Allows for the beneficiary to withdraw their funds, rejecting
+   * further deposits.
+   */
   function _close() internal {
     require(_state == State.Active);
 
     _state = State.Closed;
 
-    emit RefundsClosed();
+    emit CrowdsaleClosed();
   }
 
   /**
@@ -483,12 +489,6 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     _state = State.Rewarding;
 
     emit RewardsEnabled();
-  }
-
-  function _deposit(uint256 value, address payee) internal {
-    _deposits[payee] = _deposits[payee].add(value);
-
-    emit Deposited(payee, value);
   }
 
   function _toToken(uint256 value) internal view returns (uint256) {
