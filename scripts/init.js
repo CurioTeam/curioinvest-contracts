@@ -5,8 +5,7 @@ const config = require('../config/params');
 
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
     CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
-    TestDAI = artifacts.require('./TestDAI.sol'),
-    TestTUSD = artifacts.require('./TestTUSD.sol');
+    TestStableToken = artifacts.require('./TestStableToken.sol');
 
 // Use web3 version 1.0
 const BigNumber = this.web3.BigNumber;
@@ -29,17 +28,14 @@ const init = async function (network, accounts) {
   console.log("CurioFerrariCrowdsale: " + CurioFerrariCrowdsale.address);
 
   if(network !== 1) {
-    let testDAI = await TestDAI.deployed();
-    console.log("TestDAI: " + TestDAI.address);
-
-    let testTUSD = await TestTUSD.deployed();
-    console.log("TestTUSD: " + TestTUSD.address);
+    let testStableToken = await TestStableToken.deployed();
+    console.log("TestStableToken: " + TestStableToken.address);
   }
 
   console.log("Owner-deployer address: " + ownerAccount);
   console.log("-----");
 
-  console.log("1. Transfer " + params.saleGoal + " tokens to crowdsale contract..");
+  console.log("1. Transfer " + params.goal + " tokens to crowdsale contract..");
 
   let availableTokens = await token.balanceOf(ownerAccount);
   availableTokens = web3.utils.fromWei(web3.utils.toBN(availableTokens));
@@ -58,22 +54,6 @@ const init = async function (network, accounts) {
   let afterBalance = await token.balanceOf(CurioFerrariCrowdsale.address);
   afterBalance = web3.utils.fromWei(web3.utils.toBN(afterBalance));
   console.log("After balance: " + afterBalance + " tokens");
-
-  console.log("2. Set accepted tokens");
-
-  const testAcceptedTokens = {
-    "Dai Stablecoin v1.0": TestDAI.address,
-    "TrueUSD": TestTUSD.address,
-  };
-
-  for(let token of params.tokens) {
-    let tokenAddress = network !== 1 ? testAcceptedTokens[token.name] : token.address;
-
-    console.log(`- adding ${ token.name } (${ tokenAddress })`);
-    console.log("..processing..");
-
-    await crowdsale.addAcceptedToken(tokenAddress, token.name, token.rate, { from: ownerAccount });
-  }
 };
 
 module.exports = async function () {

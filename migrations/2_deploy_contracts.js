@@ -5,8 +5,7 @@ const config = require('../config/params');
 
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
     CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
-    TestDAI = artifacts.require('./TestDAI.sol'),
-    TestTUSD = artifacts.require('./TestTUSD.sol');
+    TestStableToken = artifacts.require('./TestStableToken.sol');
 
 // Use web3 version 1.0
 const web3 = new Web3(this.web3.currentProvider);
@@ -34,8 +33,10 @@ module.exports = function(deployer, network, accounts) {
       openingTime: moment.utc(deployParams.openingTime).unix(),
       closingTime: moment.utc(deployParams.closingTime).unix(),
       wallet: deployParams.wallet,
-      saleGoal: web3.utils.toWei(deployParams.saleGoal),
-      rewardsPercent: deployParams.rewardsPercent * 100,
+      acceptedToken: deployParams.acceptedToken,
+      rate: deployParams.rate, // for 18 decimals tokens: rate = 1
+      goal: web3.utils.toWei(deployParams.goal), // for 18 decimals tokens
+      rewardsPercent: parseFloat(deployParams.rewardsPercent) * 100,
     }
   };
 
@@ -44,14 +45,15 @@ module.exports = function(deployer, network, accounts) {
   }
 
   deployer.deploy(CurioFerrariToken, { from: owner })
+    .then(() => net !== 1 ? deployer.deploy(TestStableToken, {from: owner}) : true)
     .then(() => deployer.deploy(CurioFerrariCrowdsale,
                                 params.crowdsale.openingTime,
                                 params.crowdsale.closingTime,
                                 params.crowdsale.wallet,
                                 CurioFerrariToken.address,
-                                params.crowdsale.saleGoal,
-                                params.rewardsPercent,
-                                { from: owner }))
-    .then(() => net !== 1 ? deployer.deploy(TestDAI, {from: owner}) : true)
-    .then(() => net !== 1 ? deployer.deploy(TestTUSD, {from: owner}) : true);
+                                net !== 1 ? TestStableToken.address : params.crowdsale.acceptedToken,
+                                params.crowdsale.rate,
+                                params.crowdsale.goal,
+                                params.crowdsale.rewardsPercent,
+                                { from: owner }));
 };

@@ -2,19 +2,8 @@
   "openingTime": "",
   "closingTime": "",
   "wallet": "",
-  "saleGoal": "",
-  "rewardsPercent": "",
-  "tokens":
-  [
-    {
-      "address": "",
-      "name": "",
-      "rate": ""
-    },
-    {
-      "address": "",
-      "name": "",
-      "rate": ""
-    }
-  ]
+  "acceptedToken": "",
+  "rate": "",
+  "goal": "",
+  "rewardsPercent": ""
 }

@@ -5,8 +5,7 @@ const config = require('../config/params');
 
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
     CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
-    TestDAI = artifacts.require('./TestDAI.sol'),
-    TestTUSD = artifacts.require('./TestTUSD.sol');
+    TestStableToken = artifacts.require('./TestStableToken.sol');
 
 // Use web3 version 1.0
 const web3 = new Web3(this.web3.currentProvider);
@@ -23,11 +22,8 @@ const info = async function (network, accounts) {
   console.log("CurioFerrariCrowdsale: " + CurioFerrariCrowdsale.address);
 
   if(network !== 1) {
-    let testDAI = await TestDAI.deployed();
-    console.log("TestDAI: " + TestDAI.address);
-
-    let testTUSD = await TestTUSD.deployed();
-    console.log("TestTUSD: " + TestTUSD.address);
+    let testStableToken = await TestStableToken.deployed();
+    console.log("TestStableToken: " + TestStableToken.address);
   }
 
   console.log("Owner-deployer account: " + ownerAccount);
@@ -42,6 +38,12 @@ const info = async function (network, accounts) {
   let wallet = await crowdsale.wallet();
   console.log("Wallet: " + wallet);
 
+  let tokenAddress = await crowdsale.token();
+  console.log("Token: " + tokenAddress);
+
+  let acceptedTokenAddress = await crowdsale.acceptedToken();
+  console.log("Accepted token: " + acceptedTokenAddress);
+
   let openingTime = await crowdsale.openingTime();
   openingTime = moment.unix(openingTime).utc().format("DD MMMM YYYY HH:mm");
   console.log("Opening time: " + openingTime);
@@ -50,23 +52,23 @@ const info = async function (network, accounts) {
   closingTime = moment.unix(closingTime).utc().format("DD MMMM YYYY HH:mm");
   console.log("Closing time: " + closingTime);
 
-  let saleGoal = await crowdsale.saleGoal();
-  saleGoal = web3.utils.fromWei(web3.utils.toBN(saleGoal));
-  console.log("Sale goal: " + saleGoal + " tokens");
+  let goal = await crowdsale.goal();
+  goal = web3.utils.fromWei(web3.utils.toBN(goal));
+  console.log("Goal: " + goal + " stable tokens");
 
   let rewardsPercent = await crowdsale.rewardsPercent();
   rewardsPercent = web3.utils.toBN(rewardsPercent).toNumber() / 100;
   console.log("rewardsPercent: " + rewardsPercent + "%");
 
-  let tokensSold = await crowdsale.tokensSold();
-  tokensSold = web3.utils.fromWei(web3.utils.toBN(tokensSold));
-  console.log("Tokens sold: " + tokensSold + " tokens");
+  let raised = await crowdsale.raised();
+  raised = web3.utils.fromWei(web3.utils.toBN(raised));
+  console.log("Raised: " + raised + " stable tokens");
 
   let goalReached = await crowdsale.goalReached();
   console.log("Goal reached: " + goalReached);
 
   let state = await crowdsale.state();
-  console.log("State: " + state + "  // enum State { Active, Refunding, Closed }");
+  console.log("State: " + state + "  // enum State { Active, Refunding, Rewarding, Closed }");
 
   let paused = await crowdsale.paused();
   console.log("Paused: " + paused);

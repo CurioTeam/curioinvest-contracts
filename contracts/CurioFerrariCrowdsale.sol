@@ -226,18 +226,6 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
-   * @dev Adds list of addresses to whitelist. Not overloaded due to limitations with truffle testing.
-   * @param accounts Addresses to be added to the whitelist
-   */
-  /*
-  function addManyToWhitelist(address[] accounts) external onlyAdmin {
-    for (uint256 i = 0; i < accounts.length; i++) {
-      _whitelist[accounts[i]] = true;
-    }
-  }
-  */
-
-  /**
    * @dev Removes single address from whitelist.
    * @param account Address to be removed to the whitelist
    */
@@ -254,8 +242,6 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
 
     require(goalReached() || hasClosed());
 
-    _finalized = true;
-
     if (goalReached()) {
       if (carPurchased()) {
         _enableRewards();
@@ -266,6 +252,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
       _enableRefunds();
     }
 
+    _finalized = true;
     emit CrowdsaleFinalized();
   }
 
