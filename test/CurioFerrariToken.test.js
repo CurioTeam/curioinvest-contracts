@@ -1,9 +1,14 @@
-const { constants, expectEvent } = require('openzeppelin-test-helpers');
+const { constants, expectEvent, time } = require('openzeppelin-test-helpers');
 const { ZERO_ADDRESS } = constants;
 
 const CurioFerrariToken = artifacts.require('CurioFerrariToken');
 
 contract('CurioFerrariToken', function ([_, creator]) {
+  before(async function () {
+    // Advance to the next block to correctly read time in the solidity "now" function interpreted by ganache
+    await time.advanceBlock();
+  });
+
   beforeEach(async function () {
     this.token = await CurioFerrariToken.new({ from: creator });
   });

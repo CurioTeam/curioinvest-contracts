@@ -20,7 +20,7 @@ contract('_CurioFerrariTimedCrowdsale', function ([_, wallet, purchaser, investo
 
   beforeEach(async function () {
     this.openingTime = (await time.latest()).add(time.duration.weeks(1));
-    this.closingTime = this.openingTime.add(time.duration.weeks(1));
+    this.closingTime = this.openingTime.add(time.duration.weeks(12));
     this.afterClosingTime = this.closingTime.add(time.duration.seconds(1));
 
     this.acceptedToken = await TestStableToken.new();

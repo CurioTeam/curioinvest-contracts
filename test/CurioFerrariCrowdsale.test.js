@@ -13,9 +13,14 @@ contract('CurioFerrariCrowdsale', function (
   const GOAL = TOKEN_SUPPLY;
   const REWARDS_PERCENT = new BN(1000); // 10% reward
 
+  before(async function () {
+    // Advance to the next block to correctly read time in the solidity "now" function interpreted by ganache
+    await time.advanceBlock();
+  });
+
   beforeEach(async function () {
     this.openingTime = (await time.latest()).add(time.duration.weeks(1));
-    this.closingTime = this.openingTime.add(time.duration.weeks(1));
+    this.closingTime = this.openingTime.add(time.duration.weeks(12));
     this.afterClosingTime = this.closingTime.add(time.duration.seconds(1));
 
     this.acceptedToken = await TestStableToken.new({ from: acceptedTokenOwner });
@@ -89,6 +94,8 @@ contract('CurioFerrariCrowdsale', function (
         );
 
         await this.token.transfer(this.crowdsale.address, TOKEN_SUPPLY, { from: owner });
+
+        await this.crowdsale.changeAdmin(admin, { from: owner });
       });
 
       it('should create crowdsale with correct parameters', async function () {
@@ -107,92 +114,44 @@ contract('CurioFerrariCrowdsale', function (
         (await this.crowdsale.raised()).should.be.bignumber.equal(new BN(0));
       });
 
-      it('requires a non-null individual admin account', async function () {
-        await shouldFail.reverting(this.crowdsale.changeAdmin(ZERO_ADDRESS, { from: owner }));
-      });
-
-      it('should log changing admin account', async function () {
-        const { logs } = await this.crowdsale.changeAdmin(admin, { from: owner });
-        expectEvent.inLogs(logs, 'AdminChanged', {
-          previousAdmin: owner,
-          newAdmin: admin,
+      describe('accepting payments', function () {
+        before(function () {
+          this.amount = ether('42');
+          this.value = this.amount.div(RATE);
         });
-      });
 
-      context('with individual admin', async function () {
         beforeEach(async function () {
-          // Set individual admin account
-          await this.crowdsale.changeAdmin(admin, { from: owner });
+          await time.increaseTo(this.openingTime);
+
+          // Add beneficiary to whitelist
+          await this.crowdsale.addToWhitelist(investor, { from: admin });
         });
 
-        it('should change admin correctly', async function () {
-          (await this.crowdsale.admin()).should.be.equal(admin);
+        // Tests without accepted tokens approve
+        it('reverts on zero-valued payments', async function () {
+          await shouldFail.reverting(this.crowdsale.buy(this.amount, { from: investor }));
+          await shouldFail.reverting(this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser }));
         });
 
-        describe('accepting payments', function () {
-          before(function () {
-            this.amount = ether('42');
-            this.value = this.amount.div(RATE);
-          });
-
+        context('with non-zero payments', async function () {
           beforeEach(async function () {
-            await time.increaseTo(this.openingTime);
+            // Transfer and approve accepted stable tokens to purchaser
+            await this.acceptedToken.transfer(purchaser, this.value, { from: acceptedTokenOwner });
+            await this.acceptedToken.approve(this.crowdsale.address, this.value, { from: purchaser });
           });
 
-          context('with zero-valued payments', async function () {
-            beforeEach(async function () {
-              // Add beneficiary to whitelist
-              await this.crowdsale.addToWhitelist(investor, { from: admin });
+          describe('func buyToBeneficiary', function () {
+            it('should accept payment', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
             });
 
-            // Tests without accepted tokens approve
-            it('reverts on zero-valued payments', async function () {
-              await shouldFail.reverting(this.crowdsale.buy(this.amount, { from: investor }));
-              await shouldFail.reverting(this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser }));
-            });
-          });
-
-          context('with non-zero payments', async function () {
-            beforeEach(async function () {
-              // Transfer and approve accepted stable tokens to purchaser
-              await this.acceptedToken.transfer(purchaser, this.value, { from: acceptedTokenOwner });
-              await this.acceptedToken.approve(this.crowdsale.address, this.value, { from: purchaser });
-            });
-
-            //Tests with no-whitelisted beneficiary
-            it('requires whitelisted beneficiary', async function () {
-              // await shouldFail.reverting(this.crowdsale.buy(this.amount, { from: investor }));
-              await shouldFail.reverting(this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser }));
-            });
-
-            it('reverts if no admin add to whitelist', async function () {
-              await shouldFail.reverting(this.crowdsale.addToWhitelist(investor, { from: anyone }));
-            });
-
-            context('with whitelisted beneficiary', async function () {
-              beforeEach(async function () {
-                // Add beneficiary to whitelist
-                await this.crowdsale.addToWhitelist(investor, { from: admin });
-              });
-
-              it('should correct add beneficiary to whitelist', async function () {
-                (await this.crowdsale.isWhitelisted(investor)).should.be.equal(true);
-              });
-
-              describe('func buyToBeneficiary', function () {
-                it('should accept payment', async function () {
-                  await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
-                });
-
-                it('should log purchase', async function () {
-                  const { logs } = await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
-                  expectEvent.inLogs(logs, 'TokensPurchased', {
-                    purchaser: purchaser,
-                    beneficiary: investor,
-                    value: this.value,
-                    amount: this.amount,
-                  });
-                });
+            it('should log purchase', async function () {
+              const { logs } = await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              expectEvent.inLogs(logs, 'TokensPurchased', {
+                purchaser: purchaser,
+                beneficiary: investor,
+                value: this.value,
+                amount: this.amount,
               });
             });
           });
