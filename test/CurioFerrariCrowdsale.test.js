@@ -1,11 +1,13 @@
-const { balance, BN, constants, ether, expectEvent, shouldFail, should, time } = require('openzeppelin-test-helpers');
+const { BN, constants, ether, expectEvent, shouldFail, should, time } = require('openzeppelin-test-helpers');
 const { ZERO_ADDRESS } = constants;
 
 const CurioFerrariCrowdsale = artifacts.require('CurioFerrariCrowdsale');
 const CurioFerrariToken = artifacts.require('CurioFerrariToken');
 const TestStableToken = artifacts.require('TestStableToken');
 
-contract('CurioFerrariCrowdsale', function ([_, owner, acceptedTokenOwner, wallet]) {
+contract('CurioFerrariCrowdsale', function (
+  [_, owner, admin, acceptedTokenOwner, wallet, purchaser, investor, investor2, investorCar, anyone]
+) {
   const TOKEN_SUPPLY = ether('1100000');
   const RATE = new BN(1);
   const GOAL = TOKEN_SUPPLY;
@@ -78,27 +80,6 @@ contract('CurioFerrariCrowdsale', function ([_, owner, acceptedTokenOwner, walle
       ));
     });
 
-    it('reverts if the opening time is in the past', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
-        (await time.latest()).sub(time.duration.days(1)), this.closingTime,
-        wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
-      ));
-    });
-
-    it('reverts if the closing time is before the opening time', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
-        this.openingTime, this.openingTime.sub(time.duration.seconds(1)),
-        wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
-      ));
-    });
-
-    it('reverts if the closing time equals the opening time', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
-        this.openingTime, this.openingTime,
-        wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
-      ));
-    });
-
     context('with deployed crowdsale', async function () {
       beforeEach(async function () {
         this.crowdsale = await CurioFerrariCrowdsale.new(
@@ -122,6 +103,100 @@ contract('CurioFerrariCrowdsale', function ([_, owner, acceptedTokenOwner, walle
         (await this.crowdsale.rate()).should.be.bignumber.equal(RATE);
         (await this.crowdsale.goal()).should.be.bignumber.equal(GOAL);
         (await this.crowdsale.rewardsPercent()).should.be.bignumber.equal(REWARDS_PERCENT);
+
+        (await this.crowdsale.raised()).should.be.bignumber.equal(new BN(0));
+      });
+
+      it('requires a non-null individual admin account', async function () {
+        await shouldFail.reverting(this.crowdsale.changeAdmin(ZERO_ADDRESS, { from: owner }));
+      });
+
+      it('should log changing admin account', async function () {
+        const { logs } = await this.crowdsale.changeAdmin(admin, { from: owner });
+        expectEvent.inLogs(logs, 'AdminChanged', {
+          previousAdmin: owner,
+          newAdmin: admin,
+        });
+      });
+
+      context('with individual admin', async function () {
+        beforeEach(async function () {
+          // Set individual admin account
+          await this.crowdsale.changeAdmin(admin, { from: owner });
+        });
+
+        it('should change admin correctly', async function () {
+          (await this.crowdsale.admin()).should.be.equal(admin);
+        });
+
+        describe('accepting payments', function () {
+          before(function () {
+            this.amount = ether('42');
+            this.value = this.amount.div(RATE);
+          });
+
+          beforeEach(async function () {
+            await time.increaseTo(this.openingTime);
+          });
+
+          context('with zero-valued payments', async function () {
+            beforeEach(async function () {
+              // Add beneficiary to whitelist
+              await this.crowdsale.addToWhitelist(investor, { from: admin });
+            });
+
+            // Tests without accepted tokens approve
+            it('reverts on zero-valued payments', async function () {
+              await shouldFail.reverting(this.crowdsale.buy(this.amount, { from: investor }));
+              await shouldFail.reverting(this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser }));
+            });
+          });
+
+          context('with non-zero payments', async function () {
+            beforeEach(async function () {
+              // Transfer and approve accepted stable tokens to purchaser
+              await this.acceptedToken.transfer(purchaser, this.value, { from: acceptedTokenOwner });
+              await this.acceptedToken.approve(this.crowdsale.address, this.value, { from: purchaser });
+            });
+
+            //Tests with no-whitelisted beneficiary
+            it('requires whitelisted beneficiary', async function () {
+              // await shouldFail.reverting(this.crowdsale.buy(this.amount, { from: investor }));
+              await shouldFail.reverting(this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser }));
+            });
+
+            it('reverts if no admin add to whitelist', async function () {
+              await shouldFail.reverting(this.crowdsale.addToWhitelist(investor, { from: anyone }));
+            });
+
+            context('with whitelisted beneficiary', async function () {
+              beforeEach(async function () {
+                // Add beneficiary to whitelist
+                await this.crowdsale.addToWhitelist(investor, { from: admin });
+              });
+
+              it('should correct add beneficiary to whitelist', async function () {
+                (await this.crowdsale.isWhitelisted(investor)).should.be.equal(true);
+              });
+
+              describe('func buyToBeneficiary', function () {
+                it('should accept payment', async function () {
+                  await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+                });
+
+                it('should log purchase', async function () {
+                  const { logs } = await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+                  expectEvent.inLogs(logs, 'TokensPurchased', {
+                    purchaser: purchaser,
+                    beneficiary: investor,
+                    value: this.value,
+                    amount: this.amount,
+                  });
+                });
+              });
+            });
+          });
+        });
       });
     });
   });
