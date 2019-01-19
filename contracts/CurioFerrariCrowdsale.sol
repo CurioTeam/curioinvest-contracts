@@ -105,7 +105,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     require(address(acceptedToken) != address(token));
     require(rate > 0);
     require(goal > 0);
-    require(rewardsPercent <= 10000);
+    require(rewardsPercent > 0 && rewardsPercent <= 10000);
 
     _openingTime = openingTime;
     _closingTime = closingTime;
