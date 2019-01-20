@@ -7,7 +7,7 @@ const TestStableToken = artifacts.require('TestStableToken');
 contract('_CurioFerrariTimedCrowdsale', function ([_, wallet, purchaser, investor]) {
   const TOKEN_SUPPLY = ether('1100000');
   const RATE = new BN(1);
-  const GOAL = TOKEN_SUPPLY;
+  const GOAL = TOKEN_SUPPLY.div(RATE);
   const REWARDS_PERCENT = new BN(1000);
 
   const amount = ether('42');

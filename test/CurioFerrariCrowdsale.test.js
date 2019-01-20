@@ -10,7 +10,7 @@ contract('CurioFerrariCrowdsale', function (
 ) {
   const TOKEN_SUPPLY = ether('1100000');
   const RATE = new BN(1);
-  const GOAL = TOKEN_SUPPLY;
+  const GOAL = TOKEN_SUPPLY.div(RATE);
   const REWARDS_PERCENT = new BN(1000); // 10% reward
 
   before(async function () {
@@ -33,7 +33,7 @@ contract('CurioFerrariCrowdsale', function (
     ));
   });
 
-  context('with deployed token', async function () {
+  context('with token', async function () {
     beforeEach(async function () {
       this.token = await CurioFerrariToken.new({ from: owner });
     });
@@ -85,7 +85,7 @@ contract('CurioFerrariCrowdsale', function (
       ));
     });
 
-    context('with deployed crowdsale', async function () {
+    context('once deployed', async function () {
       beforeEach(async function () {
         this.crowdsale = await CurioFerrariCrowdsale.new(
           this.openingTime, this.closingTime, wallet, this.token.address,
@@ -96,6 +96,10 @@ contract('CurioFerrariCrowdsale', function (
         await this.token.transfer(this.crowdsale.address, TOKEN_SUPPLY, { from: owner });
 
         await this.crowdsale.changeAdmin(admin, { from: owner });
+
+        await this.crowdsale.addToWhitelist(investor, { from: admin });
+
+        await time.increaseTo(this.openingTime);
       });
 
       it('should create crowdsale with correct parameters', async function () {
@@ -120,29 +124,70 @@ contract('CurioFerrariCrowdsale', function (
           this.value = this.amount.div(RATE);
         });
 
-        beforeEach(async function () {
-          await time.increaseTo(this.openingTime);
+        const transferAndApprove = async (token, contract, beneficiary, value) => {
+          await token.transfer(beneficiary, value, { from: acceptedTokenOwner });
+          await token.approve(contract, value, { from: beneficiary });
+        };
 
-          // Add beneficiary to whitelist
-          await this.crowdsale.addToWhitelist(investor, { from: admin });
-        });
-
-        // Tests without accepted tokens approve
         it('reverts on zero-valued payments', async function () {
           await shouldFail.reverting(this.crowdsale.buy(this.amount, { from: investor }));
           await shouldFail.reverting(this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser }));
         });
 
-        context('with non-zero payments', async function () {
+        describe('high-level purchase', function () {
           beforeEach(async function () {
-            // Transfer and approve accepted stable tokens to purchaser
-            await this.acceptedToken.transfer(purchaser, this.value, { from: acceptedTokenOwner });
-            await this.acceptedToken.approve(this.crowdsale.address, this.value, { from: purchaser });
+            await transferAndApprove(this.acceptedToken, this.crowdsale.address, investor, this.value);
           });
 
-          describe('func buyToBeneficiary', function () {
+          it('should accept payment', async function () {
+            await this.crowdsale.buy(this.amount, { from: investor });
+          });
+
+          it('should log purchase', async function () {
+            const { logs } = await this.crowdsale.buy(this.amount, { from: investor });
+            expectEvent.inLogs(logs, 'TokensPurchased', {
+              purchaser: investor,
+              beneficiary: investor,
+              value: this.value,
+              amount: this.amount,
+            });
+          });
+        });
+
+        describe('low-level purchase', function () {
+          context('without return excess', function () {
+            beforeEach(async function () {
+              await transferAndApprove(this.acceptedToken, this.crowdsale.address, purchaser, this.value);
+            });
+
+            it('requires a non-null beneficiary', async function () {
+              await shouldFail.reverting(
+                this.crowdsale.buyToBeneficiary(this.amount, ZERO_ADDRESS, { from: purchaser })
+              );
+            });
+
             it('should accept payment', async function () {
               await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+            });
+
+            it('should save deposited funds for beneficiary', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              (await this.crowdsale.depositsOf(investor)).should.be.bignumber.equal(this.value);
+            });
+
+            it('should save tokens balance of beneficiary', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              (await this.crowdsale.balanceOf(investor)).should.be.bignumber.equal(this.amount);
+            });
+
+            it('should increase raised funds', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              (await this.crowdsale.raised()).should.be.bignumber.equal(this.value);
+            });
+
+            it('should collect raised funds on contract', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              (await this.acceptedToken.balanceOf(this.crowdsale.address)).should.be.bignumber.equal(this.value);
             });
 
             it('should log purchase', async function () {
@@ -152,6 +197,43 @@ contract('CurioFerrariCrowdsale', function (
                 beneficiary: investor,
                 value: this.value,
                 amount: this.amount,
+              });
+            });
+          });
+
+          context('with return excess', function () {
+            before(function () {
+              // Value with excess
+              this.excess = new BN(1);
+              this.value = GOAL.add(this.excess);
+              this.amount = this.value.mul(RATE);
+            });
+
+            beforeEach(async function () {
+              await transferAndApprove(this.acceptedToken, this.crowdsale.address, purchaser, this.value);
+            });
+
+            it('should collect raised funds on contract without excess', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              (await this.acceptedToken.balanceOf(this.crowdsale.address))
+                .should.be.bignumber.equal(this.value.sub(this.excess));
+            });
+
+            it('should increase raised funds without excess', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              (await this.crowdsale.raised()).should.be.bignumber.equal(this.value.sub(this.excess));
+            });
+
+            it('should return excess to beneficiary', async function () {
+              await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              (await this.acceptedToken.balanceOf(investor)).should.be.bignumber.equal(this.excess);
+            });
+
+            it('should log returned excess', async function () {
+              const { logs } = await this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser });
+              expectEvent.inLogs(logs, 'ExcessSent', {
+                beneficiary: investor,
+                value: this.excess,
               });
             });
           });
