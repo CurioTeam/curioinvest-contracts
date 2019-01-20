@@ -5,7 +5,8 @@ const config = require('../config/params');
 
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
     CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
-    TestStableToken = artifacts.require('./TestStableToken.sol');
+    TestStableToken = artifacts.require('./TestStableToken.sol'),
+    CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
 
 // Use web3 version 1.0
 const web3 = new Web3(this.web3.currentProvider);
@@ -55,5 +56,6 @@ module.exports = function(deployer, network, accounts) {
                                 params.crowdsale.rate,
                                 params.crowdsale.goal,
                                 params.crowdsale.rewardsPercent,
-                                { from: owner }));
+                                { from: owner }))
+    .then(() => deployer.deploy(CurioGarageNFT, { from: owner }));
 };
