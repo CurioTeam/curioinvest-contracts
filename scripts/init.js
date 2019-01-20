@@ -5,7 +5,8 @@ const config = require('../config/params');
 
 let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
     CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
-    TestStableToken = artifacts.require('./TestStableToken.sol');
+    TestStableToken = artifacts.require('./TestStableToken.sol'),
+    CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
 
 // Use web3 version 1.0
 const BigNumber = this.web3.BigNumber;
@@ -26,6 +27,9 @@ const init = async function (network, accounts) {
 
   let crowdsale = await CurioFerrariCrowdsale.deployed();
   console.log("CurioFerrariCrowdsale: " + CurioFerrariCrowdsale.address);
+
+  let nft = await CurioGarageNFT.deployed();
+  console.log("CurioGarageNFT: " + CurioGarageNFT.address);
 
   if(network !== 1) {
     let testStableToken = await TestStableToken.deployed();
@@ -54,6 +58,16 @@ const init = async function (network, accounts) {
   let afterBalance = await token.balanceOf(CurioFerrariCrowdsale.address);
   afterBalance = web3.utils.fromWei(web3.utils.toBN(afterBalance));
   console.log("After balance: " + afterBalance + " tokens");
+
+  console.log("2. Mint one NFT for Ferrari F12tdf");
+  console.log("..processing..");
+
+  await nft.mintWithTokenURI(
+    ownerAccount, new BN(1), `FerrariF12tdf:${ CurioFerrariToken.address }`,
+    { from: ownerAccount }
+  );
+
+  console.log("..ok");
 };
 
 module.exports = async function () {
