@@ -129,6 +129,10 @@ contract('CurioFerrariCrowdsale', function (
           await token.approve(contract, value, { from: beneficiary });
         };
 
+        it('reverts on ether payments', async function () {
+          await shouldFail.reverting(this.crowdsale.send(ether('1'), { from: investor }));
+        });
+
         it('reverts on zero-valued payments', async function () {
           await shouldFail.reverting(this.crowdsale.buy(this.amount, { from: investor }));
           await shouldFail.reverting(this.crowdsale.buyToBeneficiary(this.amount, investor, { from: purchaser }));
