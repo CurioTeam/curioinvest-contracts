@@ -1,5 +1,4 @@
 const moment = require('moment');
-const Web3 = require('web3');
 
 const config = require('../config/params');
 
@@ -7,9 +6,6 @@ let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
     CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
     TestStableToken = artifacts.require('./TestStableToken.sol'),
     CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
-
-// Use web3 version 1.0
-const web3 = new Web3(this.web3.currentProvider);
 
 const info = async function (network, accounts) {
   const ownerAccount = accounts[0];
