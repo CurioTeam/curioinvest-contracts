@@ -17,14 +17,14 @@
   "devDependencies": {
     "convict": "^4.4.1",
     "dotenv": "^6.2.0",
-    "moment": "^2.23.0",
+    "moment": "^2.24.0",
     "openzeppelin-test-helpers": "^0.1.2",
-    "truffle": "^5.0.1",
-    "truffle-hdwallet-provider": "^1.0.2",
-    "web3": "^1.0.0-beta.37",
+    "truffle": "^5.0.4",
+    "truffle-hdwallet-provider": "^1.0.4",
+    "web3": "^1.0.0-beta.46",
     "web3-provider-engine": "^14.1.0"
   },
   "dependencies": {
-    "openzeppelin-solidity": "^2.1.1"
+    "openzeppelin-solidity": "^2.1.2"
   }
 }
