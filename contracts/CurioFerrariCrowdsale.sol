@@ -314,12 +314,12 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
 
   function repurchaseToBeneficiary(address beneficiary) public nonReentrant {
     require(!_tokensRepurchased);
-    require(!goalReached());
-    _preValidatePurchase(_goal, beneficiary);
+    _preValidatePurchase(_toToken(_goal), beneficiary);
 
     uint256 rewards = _calculateReward(_raised.sub(_deposits[beneficiary]));
 
     uint256 value = _goal.sub(_deposits[beneficiary]).add(rewards);
+    require(value > 0);
 
     _acceptedToken.safeTransferFrom(msg.sender, address(this), value);
 
@@ -327,7 +327,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     _raised = _goal;
 
     // Transfer tokens directly to beneficiary
-    _token.safeTransfer(beneficiary, _goal);
+    _token.safeTransfer(beneficiary, _toToken(_goal));
 
     // Withdraw beneficiary deposit
     _deposits[beneficiary] = 0;
