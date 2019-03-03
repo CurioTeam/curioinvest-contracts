@@ -1,11 +1,11 @@
-const { BN, ether, expectEvent, time } = require('openzeppelin-test-helpers');
+const { BN, ether, expectEvent, should, shouldFail, time } = require('openzeppelin-test-helpers');
 
 const CurioFerrariCrowdsale = artifacts.require('CurioFerrariCrowdsale');
 const CurioFerrariToken = artifacts.require('CurioFerrariToken');
 const TestStableToken = artifacts.require('TestStableToken');
 
 contract('_CurioFerrariRepurchaseCrowdsale', function (
-  [_, owner, wallet, purchaser, investor, repurchaser]
+  [_, owner, wallet, purchaser, investor, repurchaser, anyone]
 ) {
   const TOKEN_FOR_SALE = ether('300000');
   const RATE = new BN(1);
@@ -81,7 +81,60 @@ contract('_CurioFerrariRepurchaseCrowdsale', function (
     });
   });
 
-  // context('after repurchase', function () {
+  context('after repurchase', function () {
+    beforeEach(async function () {
+      await transferAndApprove(this.acceptedToken, this.crowdsale.address, purchaser, repurchaserValue);
+      await this.crowdsale.repurchaseToBeneficiary(repurchaser, { from: purchaser });
+    });
 
-  // });
+    // - тест - нельзя забирать награду до финализации
+    // - тест - логирование RewardsEnabled (или здесь, или в части финализации)
+
+    context('after finalization', function () {
+      beforeEach(async function () {
+        this.investorClaimValue = investorValue.add(investorRewardValue);
+
+        await this.crowdsale.finalize({ from: anyone });
+      });
+
+      describe('claiming rewards', function () {
+        it('should return reward', async function () {
+          await this.crowdsale.claimReward(investor, { from: anyone });
+        });
+
+        it('reverts on second returning reward', async function () {
+          await this.crowdsale.claimReward(investor, { from: anyone });
+          await shouldFail.reverting(this.crowdsale.claimReward(investor, { from: anyone }));
+        });
+
+        it('reverts on non-investor returning reward', async function () {
+          await shouldFail.reverting(this.crowdsale.claimReward(anyone, { from: anyone }));
+        });
+
+        it('reverts on repurchaser returning reward', async function () {
+          await shouldFail.reverting(this.crowdsale.claimReward(repurchaser, { from: anyone }));
+        });
+
+        it('should transfer reward to beneficiary', async function () {
+          await this.crowdsale.claimReward(investor, { from: anyone });
+          (await this.acceptedToken.balanceOf(investor)).should.be.bignumber.equal(this.investorClaimValue);
+        });
+
+        it('should set to 0 beneficiary\'s deposit', async function () {
+          (await this.crowdsale.depositsOf(investor)).should.be.bignumber.equal(investorAmount);
+          await this.crowdsale.claimReward(investor, { from: anyone });
+          (await this.crowdsale.depositsOf(investor)).should.be.bignumber.equal(new BN(0));
+        });
+
+        it('should log returning reward', async function () {
+          const { logs } = await this.crowdsale.claimReward(investor, { from: anyone });
+          expectEvent.inLogs(logs, 'RewardWithdrawn', {
+            rewardee: investor,
+            amount: this.investorClaimValue,
+          })
+        });
+      });
+    });
+
+  });
 });
