@@ -41,7 +41,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
 
   bool private _finalized;
 
-  bool private _carPurchased;
+  bool private _tokensRepurchased;
 
   mapping(address => uint256) private _deposits;
 
@@ -62,7 +62,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     uint256 amount
   );
   event ExcessSent(address indexed beneficiary, uint256 value);
-  event CarPurchased(address indexed beneficiary);
+  event TokensRepurchased(address indexed beneficiary);
 
   event CrowdsaleFinalized();
   event CrowdsaleClosed();
@@ -118,7 +118,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     _state = State.Active;
 
     _finalized = false;
-    _carPurchased = false;
+    _tokensRepurchased = false;
   }
 
 
@@ -180,8 +180,8 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     return _finalized;
   }
 
-  function carPurchased() public view returns (bool) {
-    return _carPurchased;
+  function tokensRepurchased() public view returns (bool) {
+    return _tokensRepurchased;
   }
 
   /**
@@ -243,7 +243,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     require(goalReached() || hasClosed());
 
     if (goalReached()) {
-      if (carPurchased()) {
+      if (tokensRepurchased()) {
         _enableRewards();
       } else {
         _close();
@@ -308,12 +308,12 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     emit TokensPurchased(msg.sender, beneficiary, value, tokens);
   }
 
-  function carPurchase() external {
-    carPurchaseToBeneficiary(msg.sender);
+  function repurchase() external {
+    repurchaseToBeneficiary(msg.sender);
   }
 
-  function carPurchaseToBeneficiary(address beneficiary) public nonReentrant {
-    require(!_carPurchased);
+  function repurchaseToBeneficiary(address beneficiary) public nonReentrant {
+    require(!_tokensRepurchased);
     require(!goalReached());
     _preValidatePurchase(_goal, beneficiary);
 
@@ -332,8 +332,8 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     // Withdraw beneficiary deposit
     _deposits[beneficiary] = 0;
 
-    _carPurchased = true;
-    emit CarPurchased(beneficiary);
+    _tokensRepurchased = true;
+    emit TokensRepurchased(beneficiary);
   }
 
   /**
