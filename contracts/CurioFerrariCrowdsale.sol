@@ -363,6 +363,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     require(_state == State.Refunding);
 
     uint256 amount = _deposits[refundee];
+    require(amount > 0);
 
     _deposits[refundee] = 0;
 
