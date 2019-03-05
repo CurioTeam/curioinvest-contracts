@@ -4,9 +4,10 @@ const { ZERO_ADDRESS } = constants;
 const CurioFerrariCrowdsale = artifacts.require('CurioFerrariCrowdsale');
 const CurioFerrariToken = artifacts.require('CurioFerrariToken');
 const TestStableToken = artifacts.require('TestStableToken');
+const TestForeignToken = artifacts.require('TestForeignToken');
 
 contract('CurioFerrariCrowdsale', function (
-  [_, owner, admin, acceptedTokenOwner, wallet, purchaser, investor, investor2, investorCar, anyone]
+  [_, owner, admin, acceptedTokenOwner, wallet, purchaser, investor, foreignTokenOwner, anyone]
 ) {
   const TOKEN_SUPPLY = ether('1100000');
   const RATE = new BN(1);
@@ -244,6 +245,48 @@ contract('CurioFerrariCrowdsale', function (
               });
             });
           });
+        });
+      });
+
+      describe('withdrawal foreign tokens', function () {
+        beforeEach(async function () {
+          this.foreignToken = await TestForeignToken.new({ from: foreignTokenOwner });
+
+          this.foreignTokenValue = ether('10');
+
+          await this.foreignToken.transfer(this.crowdsale.address, this.foreignTokenValue, { from: foreignTokenOwner });
+        });
+
+        it('should withdraw tokens by owner', async function () {
+          await this.crowdsale.withdrawForeignTokens(this.foreignToken.address, { from: owner });
+        });
+
+        it('reverts on withdraw tokens by admin', async function () {
+          await shouldFail.reverting(this.crowdsale.withdrawForeignTokens(this.foreignToken.address, { from: admin }));
+        });
+
+        it('reverts on withdraw tokens by anyone', async function () {
+          await shouldFail.reverting(this.crowdsale.withdrawForeignTokens(this.foreignToken.address, { from: anyone }));
+        });
+
+        it('reverts on zero tokens address', async function () {
+          await shouldFail.reverting(this.crowdsale.withdrawForeignTokens(ZERO_ADDRESS, { from: owner }));
+        });
+
+        it('reverts on withdraw tokens for sale', async function () {
+          await shouldFail.reverting(this.crowdsale.withdrawForeignTokens(this.token.address, { from: owner }));
+        });
+
+        it('reverts on withdraw accepted tokens', async function () {
+          await shouldFail.reverting(this.crowdsale.withdrawForeignTokens(this.acceptedToken.address, { from: owner }));
+        });
+
+        it('should transfer foreign tokens to wallet', async function () {
+          (await this.foreignToken.balanceOf(this.crowdsale.address)).should.be.bignumber.equal(this.foreignTokenValue);
+          (await this.foreignToken.balanceOf(wallet)).should.be.bignumber.equal('0');
+          await this.crowdsale.withdrawForeignTokens(this.foreignToken.address, { from: owner });
+          (await this.foreignToken.balanceOf(this.crowdsale.address)).should.be.bignumber.equal('0');
+          (await this.foreignToken.balanceOf(wallet)).should.be.bignumber.equal(this.foreignTokenValue);
         });
       });
     });

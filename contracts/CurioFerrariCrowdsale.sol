@@ -434,10 +434,8 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    */
   function withdrawForeignTokens(IERC20 tokenAddress) onlyOwner external {
     require(address(tokenAddress) != address(0));
-
-    // Withdraw any tokens when crowdsale closed or rewarding state
-    // Else withdraw only not accepted tokens
-    require(tokenAddress != _acceptedToken || _state == State.Closed || _state == State.Rewarding);
+    require(tokenAddress != _token);
+    require(tokenAddress != _acceptedToken);
 
     uint256 amount = tokenAddress.balanceOf(address(this));
     tokenAddress.safeTransfer(_wallet, amount);
