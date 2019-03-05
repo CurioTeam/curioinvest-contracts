@@ -55,6 +55,10 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
       await shouldFail.reverting(this.crowdsale.claimRefund(investor));
     });
 
+    it('rejects unsold tokens withdrawals', async function () {
+      await shouldFail.reverting(this.crowdsale.withdrawUnsoldTokens({ from: owner }));
+    });
+
     context('with unreached goal', function () {
       beforeEach(async function () {
         this.amount = ether('100000');
@@ -86,6 +90,10 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
 
       it('rejects withdraw raised', async function () {
         await shouldFail.reverting(this.crowdsale.withdraw({ from: owner }));
+      });
+
+      it('rejects unsold tokens withdrawals', async function () {
+        await shouldFail.reverting(this.crowdsale.withdrawUnsoldTokens({ from: owner }));
       });
 
       context('after closing time and finalization', function () {
@@ -137,6 +145,20 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
             });
           });
         });
+
+        describe('claim unsold tokens', function () {
+          it('should withdraw unsold tokens', async function () {
+            await this.crowdsale.withdrawUnsoldTokens({ from: owner });
+          });
+
+          it('should transfer unsold tokens to wallet', async function () {
+            (await this.token.balanceOf(this.crowdsale.address)).should.be.bignumber.equal(TOKEN_FOR_SALE);
+            (await this.token.balanceOf(wallet)).should.be.bignumber.equal('0');
+            await this.crowdsale.withdrawUnsoldTokens({ from: owner });
+            (await this.token.balanceOf(this.crowdsale.address)).should.be.bignumber.equal('0');
+            (await this.token.balanceOf(wallet)).should.be.bignumber.equal(TOKEN_FOR_SALE);
+          });
+        });
       });
     });
 
@@ -175,6 +197,10 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
 
       it('rejects withdraw raised before finalization', async function () {
         await shouldFail.reverting(this.crowdsale.withdraw({ from: owner }));
+      });
+
+      it('rejects unsold tokens withdrawals', async function () {
+        await shouldFail.reverting(this.crowdsale.withdrawUnsoldTokens({ from: owner }));
       });
 
       context('after finalization', function () {
@@ -254,6 +280,10 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
             await shouldFail.reverting(this.crowdsale.withdraw({ from: owner }));
           });
         });
+
+        it('rejects unsold tokens withdrawals', async function () {
+          await shouldFail.reverting(this.crowdsale.withdrawUnsoldTokens({ from: owner }));
+        });
       });
     });
 
@@ -297,6 +327,10 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
         await shouldFail.reverting(this.crowdsale.withdraw({ from: owner }));
       });
 
+      it('rejects unsold tokens withdrawals', async function () {
+        await shouldFail.reverting(this.crowdsale.withdrawUnsoldTokens({ from: owner }));
+      });
+
       context('after finalization', function () {
         beforeEach(async function () {
           await this.crowdsale.finalize({ from: anyone });
@@ -324,6 +358,10 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
           await this.crowdsale.claimReward(investor);
           (await this.acceptedToken.balanceOf(investor)).should.be.bignumber.equal(this.investorClaimValue);
           (await this.crowdsale.depositsOf(investor)).should.be.bignumber.equal('0');
+        });
+
+        it('rejects unsold tokens withdrawals', async function () {
+          await shouldFail.reverting(this.crowdsale.withdrawUnsoldTokens({ from: owner }));
         });
       });
     });

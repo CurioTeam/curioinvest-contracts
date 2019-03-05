@@ -419,6 +419,16 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
+   * @dev Withdraws unsold tokens from this contract to wallet.
+   */
+  function withdrawUnsoldTokens() onlyOwner external {
+    require(_state == State.Refunding);
+
+    uint256 amount = _token.balanceOf(address(this));
+    _token.safeTransfer(_wallet, amount);
+  }
+
+  /**
    * @dev Withdraws any tokens from this contract to wallet.
    * @param tokenAddress The address of the foreign token
    */
