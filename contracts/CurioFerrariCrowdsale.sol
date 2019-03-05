@@ -27,6 +27,8 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
 
   uint256 private _raised;
 
+  bool private _raisedWithdrawn;
+
   // Raise goal
   uint256 private _goal;
 
@@ -119,6 +121,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
 
     _finalized = false;
     _tokensRepurchased = false;
+    _raisedWithdrawn = false;
   }
 
 
@@ -159,6 +162,10 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    */
   function raised() public view returns (uint256) {
     return _raised;
+  }
+
+  function raisedWithdrawn() public view returns (bool) {
+    return _raisedWithdrawn;
   }
 
   function goal() public view returns (uint256) {
@@ -404,8 +411,11 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    */
   function withdraw() onlyOwnerOrAdmin external {
     require(_state == State.Closed || _state == State.Rewarding);
+    require(!_raisedWithdrawn);
 
     _acceptedToken.safeTransfer(_wallet, _raised);
+
+    _raisedWithdrawn = true;
   }
 
   /**

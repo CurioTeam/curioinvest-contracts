@@ -102,7 +102,7 @@ contract('CurioFerrariCrowdsale', function (
         await time.increaseTo(this.openingTime);
       });
 
-      it('should create crowdsale with correct parameters', async function () {
+      it('should create and init crowdsale with correct parameters', async function () {
         should.exist(this.crowdsale);
         should.exist(this.token);
 
@@ -116,6 +116,9 @@ contract('CurioFerrariCrowdsale', function (
         (await this.crowdsale.rewardsPercent()).should.be.bignumber.equal(REWARDS_PERCENT);
 
         (await this.crowdsale.raised()).should.be.bignumber.equal(new BN(0));
+        (await this.crowdsale.finalized()).should.be.equal(false);
+        (await this.crowdsale.tokensRepurchased()).should.be.equal(false);
+        (await this.crowdsale.raisedWithdrawn()).should.be.equal(false);
       });
 
       describe('accepting payments', function () {

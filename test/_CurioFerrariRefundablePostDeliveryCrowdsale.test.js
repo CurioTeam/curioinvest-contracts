@@ -242,6 +242,17 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
             await this.crowdsale.withdraw({ from: owner });
             (await this.acceptedToken.balanceOf(wallet)).should.be.bignumber.equal(GOAL);
           });
+
+          it('should set withdraw raised state to true', async function () {
+            (await this.crowdsale.raisedWithdrawn()).should.be.equal(false);
+            await this.crowdsale.withdraw({ from: owner });
+            (await this.crowdsale.raisedWithdrawn()).should.be.equal(true);
+          });
+
+          it('reverts on withdraw raised twice', async function () {
+            await this.crowdsale.withdraw({ from: owner });
+            await shouldFail.reverting(this.crowdsale.withdraw({ from: owner }));
+          });
         });
       });
     });
@@ -297,6 +308,11 @@ contract('_CurioFerrariRefundablePostDeliveryCrowdsale', function (
 
         it('should withdraw raised', async function () {
           await this.crowdsale.withdraw({ from: owner });
+        });
+
+        it('reverts on withdraw raised twice', async function () {
+          await this.crowdsale.withdraw({ from: owner });
+          await shouldFail.reverting(this.crowdsale.withdraw({ from: owner }));
         });
 
         it('denies refunds', async function () {
