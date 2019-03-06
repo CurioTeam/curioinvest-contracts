@@ -12,6 +12,7 @@
     "console:develop": "npx truffle develop",
     "console:ropsten": "npx truffle console --network ropsten",
     "console:mainnet": "npx truffle console --network mainnet",
+    "test": "npm run compile && npx truffle test --network develop",
     "lint:sol": "npx solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "clean": "rm -rf ./build",
     "flatten": "scripts/flatten.sh"
