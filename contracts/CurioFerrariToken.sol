@@ -5,6 +5,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
 
 /**
  * @title CurioFerrariToken
+ * @dev ERC20 Token, where all tokens are pre-assigned to the creator.
+ * Token represents shares of Ferrari F12tdf car.
  */
 contract CurioFerrariToken is ERC20, ERC20Detailed {
   uint8 public constant DECIMALS = 18;

@@ -7,48 +7,65 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./Pausable.sol";
 
 /**
-* @title CurioFerrariCrowdsale
-*/
+ * @title CurioFerrariCrowdsale
+ * @dev CurioFerrariCrowdsale is a base contract for managing a token crowdsale,
+ * allowing investors to purchase tokens with accepted token.
+ */
 contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
+  // Crowdsale states:
+  // Active - after init crowdsale and before finalization - crowdfunding state
+  // Closed - when goal was reached and investors can withdraw purchased tokens
+  // Refunding - when goal wasn't reached and investors can refunds
+  // Rewarding - tokens were repurchased and investors can withdraw rewards
   enum State { Active, Closed, Refunding, Rewarding }
 
   // The token being sold
   IERC20 private _token;
 
+  // Address of accepted token's contract
   IERC20 private _acceptedToken;
 
   // Address where funds are collected
   address private _wallet;
 
+  // How many token units a buyer gets per unit of accepted token
   uint256 private _rate;
 
+  // Amount of accepted tokens raised
   uint256 private _raised;
 
+  // Raised funds withdrawn status
   bool private _raisedWithdrawn;
 
-  // Raise goal
+  // Amount of accepted tokens to be raised
   uint256 private _goal;
 
   // Percent of rewards after car purchase (1/100 of a percent; 0-10,000 map to 0%-100%)
   uint256 private _rewardsPercent;
 
+  // Crowdsale opening time
   uint256 private _openingTime;
 
+  // Crowdsale closing time
   uint256 private _closingTime;
 
+  // Crowdsale states
   State private _state;
 
+  // Finalization status
   bool private _finalized;
 
+  // Tokens repurchase status
   bool private _tokensRepurchased;
 
+  // Investors deposits storage
   mapping(address => uint256) private _deposits;
 
+  // Investors verification statuses
   mapping (address => bool) private _whitelist;
-
 
   /**
    * Event for token purchase logging
@@ -63,18 +80,60 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     uint256 value,
     uint256 amount
   );
+
+  /**
+   * Event for excess getting logging
+   * @param beneficiary who got excess
+   * @param value accepted tokens units as excess
+   */
   event ExcessSent(address indexed beneficiary, uint256 value);
+
+  /**
+   * Event for token repurchase logging
+   * @param beneficiary who made repurchase and got the tokens
+   */
   event TokensRepurchased(address indexed beneficiary);
 
+  /**
+   * Event for finalization logging
+   */
   event CrowdsaleFinalized();
+
+  /**
+   * Event for logging of crowdsale transition from state Active to state Closed
+   */
   event CrowdsaleClosed();
+
+  /**
+   * Event for logging of crowdsale transition from state Active to state Refunding
+   */
   event RefundsEnabled();
+
+  /**
+   * Event for logging of crowdsale transition from state Active to state Rewarding
+   */
   event RewardsEnabled();
 
+  /**
+   * Event for logging of purchased tokens withdrawal
+   * @param beneficiary who withdrawn tokens
+   * @param amount amount of tokens withdrawn
+   */
   event TokensClaimed(address indexed beneficiary, uint256 amount);
-  event RefundWithdrawn(address indexed refundee, uint256 amount);
-  event RewardWithdrawn(address indexed rewardee, uint256 amount);
 
+  /**
+   * Event for refund withdrawal logging
+   * @param refundee who got refund
+   * @param amount amount of tokens withdrawn
+   */
+  event RefundWithdrawn(address indexed refundee, uint256 amount);
+
+  /**
+   * Event for reward withdrawal logging
+   * @param rewardee who got reward
+   * @param amount amount of tokens withdrawn
+   */
+  event RewardWithdrawn(address indexed rewardee, uint256 amount);
 
   /**
    * @dev Constructor.
@@ -128,6 +187,9 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   // -----------------------------------------
   // External interface
   // -----------------------------------------
+  /**
+   * @dev Fallback function. Reverts on sending ether.
+   */
   function () external {
     revert();
   }
@@ -139,6 +201,9 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     return _token;
   }
 
+  /**
+   * @return accepted token's contract.
+   */
   function acceptedToken() public view returns (IERC20) {
     return _acceptedToken;
   }
@@ -164,18 +229,30 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     return _raised;
   }
 
+  /**
+   * @return raised funds withdrawn status.
+   */
   function raisedWithdrawn() public view returns (bool) {
     return _raisedWithdrawn;
   }
 
+  /**
+   * @return the amount of accepted tokens to be raised.
+   */
   function goal() public view returns (uint256) {
     return _goal;
   }
 
+  /**
+   * @return the percent of investor's reward.
+   */
   function rewardsPercent() public view returns (uint256) {
     return _rewardsPercent;
   }
 
+  /**
+   * @return crowdsale status.
+   */
   function state() public view returns (State) {
     return _state;
   }
@@ -187,6 +264,9 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     return _finalized;
   }
 
+  /**
+   * @return tokens repurchase status.
+   */
   function tokensRepurchased() public view returns (bool) {
     return _tokensRepurchased;
   }
@@ -220,6 +300,23 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     return block.timestamp > _closingTime;
   }
 
+  /**
+   * @return the deposit of an account in accepted token units.
+   */
+  function depositsOf(address payee) public view returns (uint256) {
+    return _deposits[payee];
+  }
+
+  /**
+   * @return the balance of an account.
+   */
+  function balanceOf(address account) public view returns (uint256) {
+    return _toToken(_deposits[account]);
+  }
+
+  /**
+   * @return is the investor in the white list.
+   */
   function isWhitelisted(address account) public view returns (bool) {
     return _whitelist[account];
   }
@@ -241,8 +338,15 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
-   * @dev Must be called after crowdsale ends, to do some extra finalization
-   * work. Calls the contract's finalization function.
+   * @dev Checks whether funding goal was reached.
+   * @return Whether funding goal was reached
+   */
+  function goalReached() public view returns (bool) {
+    return _raised >= _goal;
+  }
+
+  /**
+   * @dev Changes crowdsale state.
    */
   function finalize() public {
     require(!_finalized);
@@ -273,13 +377,18 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
-   * @dev Buy tokens for accepted tokens.
+   * @dev Buy tokens.
    * @param amount Amount of tokens will be buy
    */
   function buy(uint256 amount) external {
     buyToBeneficiary(amount, msg.sender);
   }
 
+  /**
+   * @dev Buy tokens for a given beneficiary.
+   * @param amount Amount of tokens will be buy
+   * @param beneficiary Recipient of the token purchase
+   */
   function buyToBeneficiary(uint256 amount, address beneficiary) public nonReentrant {
     _preValidatePurchase(amount, beneficiary);
 
@@ -315,10 +424,17 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     emit TokensPurchased(msg.sender, beneficiary, value, tokens);
   }
 
+  /**
+   * @dev Repurchase tokens.
+   */
   function repurchase() external {
     repurchaseToBeneficiary(msg.sender);
   }
 
+  /**
+   * @dev Repurchase for a given beneficiary.
+   * @param beneficiary Recipient of the token repurchase
+   */
   function repurchaseToBeneficiary(address beneficiary) public nonReentrant {
     require(!_tokensRepurchased);
     _preValidatePurchase(_toToken(_goal), beneficiary);
@@ -345,7 +461,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
 
   /**
    * @dev Withdraw tokens only after crowdsale ends.
-   * @param beneficiary Whose tokens will be withdrawn.
+   * @param beneficiary Whose tokens will be withdrawn
    */
   function claimTokens(address beneficiary) public {
     require(finalized());
@@ -362,8 +478,8 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
-   * @dev Investors can claim refunds here if crowdsale is unsuccessful
-   * @param refundee Whose refund will be claimed.
+   * @dev Investors can claim refunds here if crowdsale is unsuccessful.
+   * @param refundee Whose refund will be claimed
    */
   function claimRefund(address refundee) external {
     require(finalized());
@@ -379,6 +495,10 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     emit RefundWithdrawn(refundee, amount);
   }
 
+  /**
+   * @dev Investors can claim rewards here if anyone bought out tokens.
+   * @param rewardee Whose reward will be claimed
+   */
   function claimReward(address rewardee) external {
     require(finalized());
     require(_state == State.Rewarding);
@@ -396,14 +516,6 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     _acceptedToken.safeTransfer(rewardee, amount);
 
     emit RewardWithdrawn(rewardee, amount);
-  }
-
-  /**
-   * @dev Checks whether funding goal was reached.
-   * @return Whether funding goal was reached
-   */
-  function goalReached() public view returns (bool) {
-    return _raised >= _goal;
   }
 
   /**
@@ -441,22 +553,15 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     tokenAddress.safeTransfer(_wallet, amount);
   }
 
-
-  function depositsOf(address payee) public view returns (uint256) {
-    return _deposits[payee];
-  }
-
-  /**
-   * @return the balance of an account.
-   */
-  function balanceOf(address account) public view returns (uint256) {
-    return _toToken(_deposits[account]);
-  }
-
   // -----------------------------------------
   // Internal interface
   // -----------------------------------------
 
+  /**
+   * @dev Validation of an incoming purchase. Use require statements to revert state when conditions are not met.
+   * @param amount Value in accepted token units involved in the purchase
+   * @param beneficiary Token recipient address
+   */
   function _preValidatePurchase(uint256 amount, address beneficiary) internal view whenNotPaused {
     require(isOpen());
 
@@ -467,8 +572,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
-   * @dev Allows for the beneficiary to withdraw their funds, rejecting
-   * further deposits.
+   * @dev Changes crowdsale state from Active to Closed.
    */
   function _close() internal {
     require(_state == State.Active);
@@ -479,7 +583,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   }
 
   /**
-   * @dev Allows for refunds to take place, rejecting further deposits.
+   * @dev Changes crowdsale state from Active to Refunding.
    */
   function _enableRefunds() internal {
     require(_state == State.Active);
@@ -489,6 +593,9 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     emit RefundsEnabled();
   }
 
+  /**
+   * @dev Changes crowdsale state from Active to Rewarding.
+   */
   function _enableRewards() internal {
     require(_state == State.Active);
 
@@ -497,14 +604,26 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
     emit RewardsEnabled();
   }
 
+  /**
+   * @dev Converts accepted tokens to tokens for sale.
+   * @param value Value of accepted tokens will be convert
+   */
   function _toToken(uint256 value) internal view returns (uint256) {
     return _rate > 1 ? value.mul(_rate) : value;
   }
 
+  /**
+   * @dev Converts tokens for sale to accepted tokens.
+   * @param amount Value of tokens for sale will be convert
+   */
   function _fromToken(uint256 amount) internal view returns (uint256) {
     return _rate > 1 ? amount.div(_rate) : amount;
   }
 
+  /**
+   * @dev Calculates investor's reward.
+   * @param amount Amount of investor's deposit
+   */
   function _calculateReward(uint256 amount) internal view returns (uint256) {
     return amount.mul(_rewardsPercent).div(10000);
   }

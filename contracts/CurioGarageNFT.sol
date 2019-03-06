@@ -4,7 +4,8 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
 
 /**
- * @title CurioGarage Non-Fungible Token
+ * @title CurioGarageNFT
+ * @dev ERC721 Token, represents unique car-tokens of Curio garage.
  */
 contract CurioGarageNFT is ERC721Full, ERC721MetadataMintable {
   constructor () public ERC721Full("CurioGarageNFT", "CGNFT") {}
