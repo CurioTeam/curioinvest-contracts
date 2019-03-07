@@ -4,6 +4,33 @@
 
 With using [Truffle framework](http://truffleframework.com/). Powered by [Ethereum](https://ethereum.org/).  
   
+### CurioFerrariToken
+
+Token represents shares of Ferrari F12tdf car. Number of shares equal car price in USD.
+
+- ERC20 interface
+- 18 decimals
+- 1100000 total supply
+  
+### CurioFerrariGarageNFT
+
+Represents unique car-tokens of Curio garage.
+
+- ERC721 interface
+- 1 NFT token represents 1 ERC20 car-token (include address and car name as token URI)
+- Owner of contract can mint new tokens, transfer tokens to new car owner
+  
+### CurioFerrariCrowdsale
+
+Allows to purchase CurioFerrariTokens for accepted stable tokens (e.g. TrueUSD, or DAI).
+
+- Purchase tokens for others tokens
+- Buy out all tokens (even those that were bought by other investors) with the payment of investors rewards
+- Refund if the goal was not reached
+- Post-delivery logic
+- Timed logic
+- Whitelisted logic
+  
 ## Usage
 
 ### Requirements  
