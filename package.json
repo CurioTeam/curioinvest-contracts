@@ -4,9 +4,7 @@
   "private": true,
   "description": "Smart-contracts of CurioInvest project",
   "author": "Curio Capital AG",
-  "directories": {
-    "test": "test"
-  },
+  "homepage": "https://github.com/CurioTeam/curioinvest-contracts",
   "scripts": {
     "compile": "npx truffle compile",
     "console:develop": "npx truffle develop",
@@ -16,6 +14,13 @@
     "lint:sol": "npx solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "clean": "rm -rf ./build",
     "flatten": "scripts/flatten.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CurioTeam/curioinvest-contracts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CurioTeam/curioinvest-contracts/issues"
   },
   "devDependencies": {
     "convict": "^4.4.1",
