@@ -46,4 +46,14 @@ module.exports = {
       runs: 200
     }
   },
+  mocha: {
+    /*
+    // Gas estimation
+    reporter: 'eth-gas-reporter',
+    reporterOptions : {
+      currency: 'USD',
+      gasPrice: 5
+    }
+    */
+  }
 };

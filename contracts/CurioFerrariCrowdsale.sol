@@ -1,7 +1,5 @@
 pragma solidity ^0.5.0;
 
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./Pausable.sol";
@@ -348,7 +346,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
   /**
    * @dev Changes crowdsale state.
    */
-  function finalize() public {
+  function finalize() external {
     require(!_finalized);
 
     require(goalReached() || hasClosed());
@@ -463,7 +461,7 @@ contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
    * @dev Withdraw tokens only after crowdsale ends.
    * @param beneficiary Whose tokens will be withdrawn
    */
-  function claimTokens(address beneficiary) public {
+  function claimTokens(address beneficiary) external {
     require(finalized());
     require(_state == State.Closed);
 
