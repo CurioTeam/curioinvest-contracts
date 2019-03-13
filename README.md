@@ -94,14 +94,12 @@ netNames:
 
 ##### 3. Init contracts
 
-1. Transfer tokens to crowdsale contract  
-2. Mint one NFT for Ferrari F12tdf
+1. Transfer tokens to crowdsale contract;  
+2. Mint one NFT for Ferrari F12tdf.
 
 ```
 truffle exec scripts/init.js --network <netName>
 ```
-
-Configurations in config/\<netName>.json files.
 
 ##### 4. View deployed contracts info
 
