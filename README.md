@@ -44,6 +44,30 @@ Allows to purchase CurioFerrariTokens for accepted stable tokens (e.g. TrueUSD, 
 npm i
 ```
 
+### Configure
+
+Create file ```<netName>.json``` in ```config/params``` directory. Fill out the config as in ```config/params/example.json```.
+
+netNames:
+
+```json
+[
+  "development",
+  "ropsten",
+  "mainnet"
+]
+```
+
+##### Parameters
+
+1. ```openingTime``` - Crowdsale opening time;  
+2. ```closingTime``` - Crowdsale closing time;  
+3. ```wallet``` - Address where collected funds will be forwarded to;  
+4. ```acceptedToken``` - Address of the accepted token (stable token);  
+5. ```rate``` - Number of token units a buyer gets per accepted token's unit;  
+6. ```goal``` - Raise goal in accepted token units (soft and hard cap);  
+7. ```rewardsPercent``` -  Percent of investor's rewards after all tokens purchased (0-10,000).  
+
 ### Deploy
 
 ##### 1. Compile contracts
