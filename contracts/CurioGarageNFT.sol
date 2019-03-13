@@ -8,5 +8,5 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol"
  * @dev ERC721 Token, represents unique car-tokens of Curio garage.
  */
 contract CurioGarageNFT is ERC721Full, ERC721MetadataMintable {
-  constructor () public ERC721Full("CurioGarageNFT", "CGNFT") {}
+    constructor () public ERC721Full("CurioGarageNFT", "CGNFT") {}
 }
