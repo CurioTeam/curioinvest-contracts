@@ -36,7 +36,7 @@ Allows to purchase CurioFerrariTokens for accepted stable tokens (e.g. TrueUSD, 
 ### Requirements  
 
 - Linux
-- Node v10.14.1, NPM v6.4.1
+- Node v10.14.1, NPM v6.9.0
 
 ### Install
 
