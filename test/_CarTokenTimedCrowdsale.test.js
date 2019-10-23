@@ -1,7 +1,7 @@
 const { BN, ether, shouldFail, should, time } = require('openzeppelin-test-helpers');
 
-const CurioFerrariCrowdsale = artifacts.require('CurioFerrariCrowdsale');
-const CurioFerrariToken = artifacts.require('CurioFerrariToken');
+const CarTokenCrowdsale = artifacts.require('CarTokenCrowdsale');
+const CarToken = artifacts.require('CarToken');
 const TestStableToken = artifacts.require('TestStableToken');
 
 contract('_CurioFerrariTimedCrowdsale', function ([_, wallet, purchaser, investor]) {
@@ -24,25 +24,25 @@ contract('_CurioFerrariTimedCrowdsale', function ([_, wallet, purchaser, investo
     this.afterClosingTime = this.closingTime.add(time.duration.seconds(1));
 
     this.acceptedToken = await TestStableToken.new();
-    this.token = await CurioFerrariToken.new();
+    this.token = await CarToken.new();
   });
 
   it('reverts if the opening time is in the past', async function () {
-    await shouldFail.reverting(CurioFerrariCrowdsale.new(
+    await shouldFail.reverting(CarTokenCrowdsale.new(
       (await time.latest()).sub(time.duration.days(1)), this.closingTime,
       wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
     ));
   });
 
   it('reverts if the closing time is before the opening time', async function () {
-    await shouldFail.reverting(CurioFerrariCrowdsale.new(
+    await shouldFail.reverting(CarTokenCrowdsale.new(
       this.openingTime, this.openingTime.sub(time.duration.seconds(1)),
       wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
     ));
   });
 
   it('reverts if the closing time equals the opening time', async function () {
-    await shouldFail.reverting(CurioFerrariCrowdsale.new(
+    await shouldFail.reverting(CarTokenCrowdsale.new(
       this.openingTime, this.openingTime,
       wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
     ));
@@ -50,7 +50,7 @@ contract('_CurioFerrariTimedCrowdsale', function ([_, wallet, purchaser, investo
 
   context('with crowdsale', function () {
     beforeEach(async function () {
-      this.crowdsale = await CurioFerrariCrowdsale.new(
+      this.crowdsale = await CarTokenCrowdsale.new(
         this.openingTime, this.closingTime, wallet, this.token.address,
         this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
       );

@@ -2,8 +2,8 @@ const moment = require('moment');
 
 const config = require('../config/params');
 
-let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
-    CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
+let CarToken1 = artifacts.require('./CarToken1.sol'),
+    CarTokenCrowdsale = artifacts.require('./CarTokenCrowdsale.sol'),
     TestStableToken = artifacts.require('./TestStableToken.sol'),
     CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
 
@@ -40,13 +40,13 @@ module.exports = function(deployer, network, accounts) {
     params.crowdsale.wallet = accounts[2];
   }
 
-  deployer.deploy(CurioFerrariToken, { from: owner })
+  deployer.deploy(CarToken1, { from: owner })
     .then(() => net !== 1 ? deployer.deploy(TestStableToken, {from: owner}) : true)
-    .then(() => deployer.deploy(CurioFerrariCrowdsale,
+    .then(() => deployer.deploy(CarTokenCrowdsale,
                                 params.crowdsale.openingTime,
                                 params.crowdsale.closingTime,
                                 params.crowdsale.wallet,
-                                CurioFerrariToken.address,
+                                CarToken1.address,
                                 net !== 1 ? TestStableToken.address : params.crowdsale.acceptedToken,
                                 params.crowdsale.rate,
                                 params.crowdsale.goal,

@@ -1,12 +1,12 @@
 const { BN, constants, ether, expectEvent, shouldFail, should, time } = require('openzeppelin-test-helpers');
 const { ZERO_ADDRESS } = constants;
 
-const CurioFerrariCrowdsale = artifacts.require('CurioFerrariCrowdsale');
-const CurioFerrariToken = artifacts.require('CurioFerrariToken');
+const CarTokenCrowdsale = artifacts.require('CarTokenCrowdsale');
+const CarToken = artifacts.require('CarToken');
 const TestStableToken = artifacts.require('TestStableToken');
 const TestForeignToken = artifacts.require('TestForeignToken');
 
-contract('CurioFerrariCrowdsale', function (
+contract('CarTokenCrowdsale', function (
   [_, owner, admin, acceptedTokenOwner, wallet, purchaser, investor, foreignTokenOwner, anyone]
 ) {
   const TOKEN_SUPPLY = ether('1100000');
@@ -28,7 +28,7 @@ contract('CurioFerrariCrowdsale', function (
   });
 
   it('requires a non-null token', async function () {
-    await shouldFail.reverting(CurioFerrariCrowdsale.new(
+    await shouldFail.reverting(CarTokenCrowdsale.new(
       this.openingTime, this.closingTime,
       wallet, ZERO_ADDRESS, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
     ));
@@ -36,51 +36,51 @@ contract('CurioFerrariCrowdsale', function (
 
   context('with token', async function () {
     beforeEach(async function () {
-      this.token = await CurioFerrariToken.new({ from: owner });
+      this.token = await CarToken.new({ from: owner });
     });
 
     it('requires a correct accepted token', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
+      await shouldFail.reverting(CarTokenCrowdsale.new(
         this.openingTime, this.closingTime,
         wallet, this.token.address, ZERO_ADDRESS, RATE, GOAL, REWARDS_PERCENT
       ));
 
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
+      await shouldFail.reverting(CarTokenCrowdsale.new(
         this.openingTime, this.closingTime,
         wallet, this.token.address, this.token.address, RATE, GOAL, REWARDS_PERCENT
       ));
     });
 
     it('requires a non-null wallet', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
+      await shouldFail.reverting(CarTokenCrowdsale.new(
         this.openingTime, this.closingTime,
         ZERO_ADDRESS, this.token.address, this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT
       ));
     });
 
     it('requires a non-zero rate', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
+      await shouldFail.reverting(CarTokenCrowdsale.new(
         this.openingTime, this.closingTime,
         wallet, this.token.address, this.acceptedToken.address, 0, GOAL, REWARDS_PERCENT
       ));
     });
 
     it('requires a non-zero goal', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
+      await shouldFail.reverting(CarTokenCrowdsale.new(
         this.openingTime, this.closingTime,
         wallet, this.token.address, this.acceptedToken.address, RATE, 0, REWARDS_PERCENT
       ));
     });
 
     it('requires a non-zero rewards percent', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
+      await shouldFail.reverting(CarTokenCrowdsale.new(
         this.openingTime, this.closingTime,
         wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, 0
       ));
     });
 
     it('requires a correct rewards percent', async function () {
-      await shouldFail.reverting(CurioFerrariCrowdsale.new(
+      await shouldFail.reverting(CarTokenCrowdsale.new(
         this.openingTime, this.closingTime,
         wallet, this.token.address, this.acceptedToken.address, RATE, GOAL, new BN(10001)
       ));
@@ -88,7 +88,7 @@ contract('CurioFerrariCrowdsale', function (
 
     context('once deployed', async function () {
       beforeEach(async function () {
-        this.crowdsale = await CurioFerrariCrowdsale.new(
+        this.crowdsale = await CarTokenCrowdsale.new(
           this.openingTime, this.closingTime, wallet, this.token.address,
           this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT,
           { from: owner }

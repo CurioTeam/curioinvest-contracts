@@ -7,11 +7,11 @@ dotenv.config({
 });
 
 const config = convict({
-  infuraApiKey: {
-    doc: 'Infura API key.',
+  infuraProjectId: {
+    doc: 'Infura project ID.',
     format: '*',
     default: '',
-    env: 'INFURA_API_KEY'
+    env: 'INFURA_PROJECT_ID'
   },
   ropstenMnemonic: {
     doc: 'Mnenonic phrase (12 words) for Ropsten test network.',

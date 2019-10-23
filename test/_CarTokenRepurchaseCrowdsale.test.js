@@ -1,7 +1,7 @@
 const { BN, ether, expectEvent, shouldFail, time } = require('openzeppelin-test-helpers');
 
-const CurioFerrariCrowdsale = artifacts.require('CurioFerrariCrowdsale');
-const CurioFerrariToken = artifacts.require('CurioFerrariToken');
+const CarTokenCrowdsale = artifacts.require('CarTokenCrowdsale');
+const CarToken = artifacts.require('CarToken');
 const TestStableToken = artifacts.require('TestStableToken');
 
 contract('_CurioFerrariRepurchaseCrowdsale', function (
@@ -32,9 +32,9 @@ contract('_CurioFerrariRepurchaseCrowdsale', function (
     this.closingTime = this.openingTime.add(time.duration.weeks(12));
 
     this.acceptedToken = await TestStableToken.new({ from: owner });
-    this.token = await CurioFerrariToken.new({ from: owner });
+    this.token = await CarToken.new({ from: owner });
 
-    this.crowdsale = await CurioFerrariCrowdsale.new(
+    this.crowdsale = await CarTokenCrowdsale.new(
       this.openingTime, this.closingTime, wallet, this.token.address,
       this.acceptedToken.address, RATE, GOAL, REWARDS_PERCENT,
       { from: owner }

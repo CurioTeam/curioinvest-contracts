@@ -5,11 +5,11 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./Pausable.sol";
 
 /**
- * @title CurioFerrariCrowdsale
- * @dev CurioFerrariCrowdsale is a base contract for managing a token crowdsale,
+ * @title CarTokenCrowdsale
+ * @dev CarTokenCrowdsale is a base contract for managing a token crowdsale,
  * allowing investors to purchase tokens with accepted token.
  */
-contract CurioFerrariCrowdsale is Pausable, ReentrancyGuard {
+contract CarTokenCrowdsale is Pausable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
