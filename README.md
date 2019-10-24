@@ -4,7 +4,7 @@
 
 With using [Truffle framework](http://truffleframework.com/). Powered by [Ethereum](https://ethereum.org/).  
   
-### CurioFerrariToken
+### CarToken1
 
 Token represents shares of Ferrari F12tdf car. Number of shares equal car price in USD.
 
@@ -12,7 +12,7 @@ Token represents shares of Ferrari F12tdf car. Number of shares equal car price 
 - 18 decimals
 - 1100000 total supply
   
-### CurioFerrariGarageNFT
+### CurioGarageNFT
 
 Represents unique car-tokens of Curio garage.
 
@@ -20,9 +20,9 @@ Represents unique car-tokens of Curio garage.
 - 1 NFT token represents 1 ERC20 car-token (include address and car name as token URI)
 - Owner of contract can mint new tokens, transfer tokens to new car owner
   
-### CurioFerrariCrowdsale
+### CarTokenCrowdsale
 
-Allows to purchase CurioFerrariTokens for accepted stable tokens (e.g. TrueUSD, or DAI).
+Allows to purchase CarToken1 for accepted stable tokens (e.g. TrueUSD, or DAI).
 
 - Purchase tokens for others tokens
 - Buy out all tokens (even those that were bought by other investors) with the payment of investors rewards
@@ -35,7 +35,7 @@ Allows to purchase CurioFerrariTokens for accepted stable tokens (e.g. TrueUSD, 
 
 ### Requirements  
 
-- Linux
+- Linux (for run bash scripts)
 - Node v10.14.1, NPM v6.9.0
 
 ### Install
@@ -44,7 +44,39 @@ Allows to purchase CurioFerrariTokens for accepted stable tokens (e.g. TrueUSD, 
 npm i
 ```
 
-### Configure
+### Compile contracts
+
+```
+npm run compile
+```
+
+### Run tests
+
+Using local truffle develop network.
+
+```
+npx truffle develop
+
+truffle(develop)> test
+```
+
+### Deploy
+
+#### 1. Configure network parameters
+
+Create file ```.env``` in root project directory. Fill out environment variables as in ```.env.example```.
+
+##### Parameters:
+
+1. ```INFURA_PROJECT_ID``` - Project ID for Infura provider;  
+2. ```MAINNET_MNEMONIC``` - Mnemonic phrase of deployer wallets;  
+3. ```MAINNET_GAS_LIMIT``` - Gas limit value;  
+4. ```MAINNET_GAS_PRICE``` - Gas price value;  
+5. ```ROPSTEN_MNEMONIC``` - Mnemonic phrase of deployer wallets (for Ropsten network);  
+6. ```ROPSTEN_GAS_LIMIT``` - Gas limit value (for Ropsten network);  
+7. ```ROPSTEN_GAS_PRICE``` - Gas price value (for Ropsten network);  
+
+#### 2. Configure crowdsale parameters (for crowdsale contract deploying)
 
 Create file ```<netName>.json``` in ```config/params``` directory. Fill out the config as in ```config/params/example.json```.
 
@@ -58,7 +90,7 @@ netNames:
 ]
 ```
 
-##### Parameters
+##### Parameters:
 
 1. ```openingTime``` - Crowdsale opening time;  
 2. ```closingTime``` - Crowdsale closing time;  
@@ -68,18 +100,17 @@ netNames:
 6. ```goal``` - Raise goal in accepted token units (soft and hard cap);  
 7. ```rewardsPercent``` -  Percent of investor's rewards after all tokens purchased (0-10,000).  
 
-### Deploy
 
-##### 1. Compile contracts
-
-```
-truffle compile
-```
-
-##### 2. Deploy contracts
+#### 3. Compile contracts
 
 ```
-truffle migrate --network <netName> --reset
+npx truffle compile
+```
+
+#### 4. Deploy contracts
+
+```
+npx truffle migrate --network <netName> --reset
 ```
 
 netNames:
@@ -91,20 +122,3 @@ netNames:
   "mainnet"
 ]
 ```
-
-##### 3. Init contracts
-
-1. Transfer tokens to crowdsale contract;  
-2. Mint one NFT for Ferrari F12tdf.
-
-```
-truffle exec scripts/init.js --network <netName>
-```
-
-##### 4. View deployed contracts info
-
-```
-truffle exec scripts/info.js --network <netName>
-```
-
-

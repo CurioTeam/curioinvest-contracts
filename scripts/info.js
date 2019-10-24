@@ -2,8 +2,8 @@ const moment = require('moment');
 
 const config = require('../config/params');
 
-let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
-    CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
+let CarToken1 = artifacts.require('./CarToken1.sol'),
+    CarTokenCrowdsale = artifacts.require('./CarTokenCrowdsale.sol'),
     TestStableToken = artifacts.require('./TestStableToken.sol'),
     CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
 
@@ -12,11 +12,11 @@ const info = async function (network, accounts) {
 
   console.log("-----");
 
-  let token = await CurioFerrariToken.deployed();
-  console.log("CurioFerrariToken: " + CurioFerrariToken.address);
+  let token = await CarToken1.deployed();
+  console.log("CarToken1: " + CarToken1.address);
 
-  let crowdsale = await CurioFerrariCrowdsale.deployed();
-  console.log("CurioFerrariCrowdsale: " + CurioFerrariCrowdsale.address);
+  let crowdsale = await CarTokenCrowdsale.deployed();
+  console.log("CarTokenCrowdsale: " + CarTokenCrowdsale.address);
 
   let nft = await CurioGarageNFT.deployed();
   console.log("CurioGarageNFT: " + CurioGarageNFT.address);

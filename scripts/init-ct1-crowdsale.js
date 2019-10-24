@@ -1,24 +1,24 @@
 const config = require('../config/params');
 
-let CurioFerrariToken = artifacts.require('./CurioFerrariToken.sol'),
-    CurioFerrariCrowdsale = artifacts.require('./CurioFerrariCrowdsale.sol'),
+let CarToken1 = artifacts.require('./CarToken1.sol'),
+    CarTokenCrowdsale = artifacts.require('./CarTokenCrowdsale.sol'),
     TestStableToken = artifacts.require('./TestStableToken.sol'),
     CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
 
 const BN = web3.utils.BN;
 
-const init = async function (network, accounts) {
+const initCt1Crowdsale = async function (network, accounts) {
   const ownerAccount = accounts[0];
 
   const params = config.get(network);
 
   console.log("-----");
 
-  let token = await CurioFerrariToken.deployed();
-  console.log("CurioFerrariToken: " + CurioFerrariToken.address);
+  let token = await CarToken1.deployed();
+  console.log("CarToken1: " + CarToken1.address);
 
-  let crowdsale = await CurioFerrariCrowdsale.deployed();
-  console.log("CurioFerrariCrowdsale: " + CurioFerrariCrowdsale.address);
+  let crowdsale = await CarTokenCrowdsale.deployed();
+  console.log("CarTokenCrowdsale: " + CarTokenCrowdsale.address);
 
   let nft = await CurioGarageNFT.deployed();
   console.log("CurioGarageNFT: " + CurioGarageNFT.address);
@@ -37,7 +37,7 @@ const init = async function (network, accounts) {
   availableTokens = web3.utils.fromWei(web3.utils.toBN(availableTokens));
   console.log("Available tokens to transfer: " + availableTokens + " tokens");
 
-  let beforeBalance = await token.balanceOf(CurioFerrariCrowdsale.address);
+  let beforeBalance = await token.balanceOf(CarTokenCrowdsale.address);
   beforeBalance = web3.utils.fromWei(web3.utils.toBN(beforeBalance));
   console.log("Before balance: " + beforeBalance + " tokens");
 
@@ -45,21 +45,11 @@ const init = async function (network, accounts) {
   const totalSupply = await token.totalSupply();
 
   // Transfer all tokens to crowdsale contract
-  await token.transfer(CurioFerrariCrowdsale.address, totalSupply, { from: ownerAccount });
+  await token.transfer(CarTokenCrowdsale.address, totalSupply, { from: ownerAccount });
 
-  let afterBalance = await token.balanceOf(CurioFerrariCrowdsale.address);
+  let afterBalance = await token.balanceOf(CarTokenCrowdsale.address);
   afterBalance = web3.utils.fromWei(web3.utils.toBN(afterBalance));
   console.log("After balance: " + afterBalance + " tokens");
-
-  console.log("2. Mint one NFT for Ferrari F12tdf");
-  console.log("..processing..");
-
-  await nft.mintWithTokenURI(
-    ownerAccount, new BN(1), `FerrariF12tdf:${ CurioFerrariToken.address }`,
-    { from: ownerAccount }
-  );
-
-  console.log("..ok");
 };
 
 module.exports = async function () {
@@ -67,9 +57,9 @@ module.exports = async function () {
   const network = await web3.eth.net.getId();
 
   try {
-    console.log("*** INIT script ***");
+    console.log("*** INIT crowdsale script ***");
 
-    await init(network, accounts);
+    await initCt1Crowdsale(network, accounts);
 
     console.log("Init script end.");
   } catch (e) {

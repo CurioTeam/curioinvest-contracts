@@ -1,14 +1,21 @@
-const moment = require('moment');
+// const moment = require('moment');
 
-const config = require('../config/params');
+// const config = require('../config/params');
 
-let CarToken1 = artifacts.require('./CarToken1.sol'),
-    CarTokenCrowdsale = artifacts.require('./CarTokenCrowdsale.sol'),
-    TestStableToken = artifacts.require('./TestStableToken.sol'),
-    CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
+const CarToken1 = artifacts.require('./CarToken1.sol');
+const CurioGarageNFT = artifacts.require('./CurioGarageNFT.sol');
+
+/*
+const CarTokenCrowdsale = artifacts.require('./CarTokenCrowdsale.sol');
+const TestStableToken = artifacts.require('./TestStableToken.sol');
+*/
+
+const BN = web3.utils.BN;
 
 module.exports = function(deployer, network, accounts) {
   const owner = accounts[0];
+
+  /*
   let net;
 
   switch (network) {
@@ -39,7 +46,9 @@ module.exports = function(deployer, network, accounts) {
   if(params.crowdsale.wallet === ""){
     params.crowdsale.wallet = accounts[2];
   }
+  */
 
+  /*
   deployer.deploy(CarToken1, { from: owner })
     .then(() => net !== 1 ? deployer.deploy(TestStableToken, {from: owner}) : true)
     .then(() => deployer.deploy(CarTokenCrowdsale,
@@ -53,4 +62,21 @@ module.exports = function(deployer, network, accounts) {
                                 params.crowdsale.rewardsPercent,
                                 { from: owner }))
     .then(() => deployer.deploy(CurioGarageNFT, { from: owner }));
+  */
+
+  deployer.deploy(CurioGarageNFT, { from: owner })
+    .then(() => deployer.deploy(CarToken1, { from: owner }))
+    .then(async () => {
+      const nft = await CurioGarageNFT.deployed();
+
+      console.log("CurioGarageNFT: " + CurioGarageNFT.address);
+      console.log("CarToken1(CT1): " + CarToken1.address);
+
+      console.log("Minting NFT for CT1 token..");
+
+      await nft.mintWithTokenURI(
+        owner, new BN(1), `CT1:${ CarToken1.address }`,
+        { from: owner }
+      );
+    });
 };

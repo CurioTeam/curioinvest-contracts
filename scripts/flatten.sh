@@ -2,6 +2,6 @@
 
 OUTPUT_DIR="build/flattened-contracts"
 
-npx truffle-flattener contracts/CurioFerrariToken.sol --output "$OUTPUT_DIR/CurioFerrariToken.sol"
+npx truffle-flattener contracts/CarToken1.sol --output "$OUTPUT_DIR/CarToken1.sol"
 npx truffle-flattener contracts/CurioGarageNFT.sol --output "$OUTPUT_DIR/CurioGarageNFT.sol"
-npx truffle-flattener contracts/CurioFerrariCrowdsale.sol --output "$OUTPUT_DIR/CurioFerrariCrowdsale.sol"
+npx truffle-flattener contracts/CarTokenCrowdsale.sol --output "$OUTPUT_DIR/CarTokenCrowdsale.sol"
