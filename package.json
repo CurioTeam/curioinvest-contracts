@@ -26,7 +26,7 @@
     "convict": "^4.4.1",
     "dotenv": "^7.0.0",
     "eth-gas-reporter": "^0.1.12",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "openzeppelin-test-helpers": "^0.1.5",
     "solhint": "^2.3.0",
     "truffle": "^5.0.41",
