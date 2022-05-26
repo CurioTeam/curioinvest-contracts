@@ -23,7 +23,7 @@
     "url": "https://github.com/CurioTeam/curioinvest-contracts/issues"
   },
   "devDependencies": {
-    "convict": "^4.4.1",
+    "convict": "^6.2.3",
     "dotenv": "^7.0.0",
     "eth-gas-reporter": "^0.1.12",
     "moment": "^2.24.0",
